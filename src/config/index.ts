@@ -1,25 +1,6 @@
 import * as dotenv from 'dotenv';
 import { Logger } from '../logger';
 
-const ConfigKeys = [
-  debugMode',
-  continuousMode',
-  continuousLimit',
-  speakMode',
-  skipReprompt',
-  allowDownloads',
-  seleniumWebBrowser',
-  aiSettingsFile',
-  fastLLMModel',
-  smartLLMModel',
-  fastTokenLimit',
-  smartTokenLimit',
-  browseChunkMaxLength',
-  openAIAPIKey',
-  temperature',
-  executeLocalCommands',
-];
-
 export class Config {
 
   public static init () {
@@ -65,16 +46,18 @@ export class Config {
   public static get speakMode () { const instance = this.instance; return instance.speakMode; }
   public static get skipReprompt () { const instance = this.instance; return instance.skipReprompt; }
   public static get allowDownloads () { const instance = this.instance; return instance.allowDownloads; }
-  public static get seleniumWebBrowser () { const instance = this.instance; return instance.seleniumWebBrowser; }
   public static get aiSettingsFile () { const instance = this.instance; return instance.aiSettingsFile; }
   public static get fastLLMModel () { const instance = this.instance; return instance.fastLLMModel; }
   public static get smartLLMModel () { const instance = this.instance; return instance.smartLLMModel; }
   public static get fastTokenLimit () { const instance = this.instance; return instance.fastTokenLimit; }
   public static get smartTokenLimit () { const instance = this.instance; return instance.smartTokenLimit; }
   public static get browseChunkMaxLength () { const instance = this.instance; return instance.browseChunkMaxLength; }
+  public static get browseSpacyLanguageModel () { const instance = this.instance; return instance.browseSpacyLanguageModel; }
   public static get openAIAPIKey () { const instance = this.instance; return instance.openAIAPIKey; }
   public static get temperature () { const instance = this.instance; return instance.temperature; }
   public static get executeLocalCommands () { const instance = this.instance; return instance.executeLocalCommands; }
+  public static get memoryBackend () { const instance = this.instance; return instance.memoryBackend; }
+  public static get memoryIndex () { const instance = this.instance; return instance.memoryIndex; }
 
   private constructor () {
     this.debugMode = false;
@@ -84,17 +67,20 @@ export class Config {
     this.skipReprompt = false;
     this.allowDownloads = false;
 
-    this.seleniumWebBrowser = this.getEnv('USE_WEB_BROWSER', 'chrome');
     this.aiSettingsFile = this.getEnv('AI_SETTINGS_FILE', 'ai_settings.yaml');
     this.fastLLMModel = this.getEnv('FAST_LLM_MODEL', 'gpt-3.5-turbo');
     this.smartLLMModel = this.getEnv('SMART_LLM_MODEL', 'gpt-4');
     this.fastTokenLimit = this.getEnv('FAST_TOKEN_LIMIT', 4000);
     this.smartTokenLimit = this.getEnv('SMART_TOKEN_LIMIT', 8000);
     this.browseChunkMaxLength = this.getEnv('BROWSE_CHUNK_MAX_LENGTH', 8192);
+    this.browseSpacyLanguageModel = this.getEnv('BROWSE_SPACY_LANGUAGE_MODEL', 'en_core_web_sm');
 
     this.openAIAPIKey = this.getEnv('OPENAI_API_KEY');
     this.temperature = this.getEnv('TEMPERATURE', 1);
     this.executeLocalCommands = this.getEnv('EXECUTE_LOCAL_COMMANDS', false);
+
+    this.memoryBackend = this.getEnv('MEMORY_BACKEND', 'local');
+    this.memoryIndex = this.getEnv('MEMORY_INDEX', 'x-gpt');
   }
   
   private getEnv<T> (key: string): T | undefined
@@ -136,14 +122,16 @@ export class Config {
   private speakMode: boolean;
   private skipReprompt: boolean;
   private allowDownloads: boolean;
-  private seleniumWebBrowser: string;
   private aiSettingsFile: string;
   private fastLLMModel: string;
   private smartLLMModel: string;
   private fastTokenLimit: number;
   private smartTokenLimit: number;
   private browseChunkMaxLength: number;
+  private browseSpacyLanguageModel: string;
   private openAIAPIKey?: string;
   private temperature: number;
   private executeLocalCommands: boolean;
+  private memoryBackend: string;
+  private memoryIndex: string;
 }

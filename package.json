@@ -8,13 +8,18 @@
     "dev": "yarn nodemon"
   },
   "devDependencies": {
+    "@types/argparse": "^2.0.10",
+    "@types/lodash": "^4.14.194",
     "@types/node": "^18.15.11",
     "nodemon": "^2.0.22",
     "ts-node": "^10.9.1",
     "typescript": "^5.0.4"
   },
   "dependencies": {
+    "@d4c/numjs": "^0.17.34",
+    "argparse": "^2.0.1",
     "dotenv": "^16.0.3",
+    "lodash": "^4.17.21",
     "openai": "^3.2.1"
   }
 }

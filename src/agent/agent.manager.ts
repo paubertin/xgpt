@@ -1,4 +1,5 @@
 import { IAgent, IMessage } from "../interfaces";
+import { createChatCompletion } from "../llm.utils";
 
 
 /**
@@ -19,7 +20,7 @@ export class AgentManager {
   /**
    * Create a new agent and return its key
    */
-  public static createAgent (task: string, prompt: string, model: string) {
+  public static async createAgent (task: string, prompt: string, model: string) {
     const instance = this.instance;
     const messages: IMessage[] = [
       {
@@ -28,7 +29,7 @@ export class AgentManager {
       }
     ];
 
-    const agentReply = createChatCompletion(model = model, messages = messages);
+    const agentReply = await createChatCompletion(messages, model);
   
     messages.push({
       role: 'assistant',
@@ -53,7 +54,7 @@ export class AgentManager {
   /**
    * Send a message to an agent and return its response
    */
-  public static messageAgent (key: number, message: string) {
+  public static async messageAgent (key: number, message: string) {
     const instance = this.instance;
     const agent = instance.agents.get(key);
 
@@ -66,7 +67,7 @@ export class AgentManager {
       content: message,
     });
 
-    const agentReply = createChatCompletion(model = model, messages = messages);
+    const agentReply = await createChatCompletion(agent.messages, agent.model);
 
     agent.messages.push({
       role: 'assistant',
