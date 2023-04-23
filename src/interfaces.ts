@@ -1,10 +1,7 @@
-export interface IMessage {
-  role: 'assistant' | 'user';
-  content: string;
-}
+import { Message } from "./openai";
 
 export interface IAgent {
   task: any;
-  messages: IMessage[];
+  messages: Message[];
   model: any;
 }

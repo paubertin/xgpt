@@ -1,7 +1,7 @@
 export abstract class Memory {
-  public abstract add (data: any): Promise<any>;
-  public abstract get (data: any): void;
+  public abstract add (data: string): Promise<any>;
+  public abstract get (data: string): void;
   public abstract clear (): void;
-  public abstract getRelevant (data: any, numRelevant: number): void;
+  public abstract getRelevant (data: string, numRelevant: number): Promise<string[]>;
   public abstract getStats (): void;
 }

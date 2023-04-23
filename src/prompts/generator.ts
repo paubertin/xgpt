@@ -1,4 +1,7 @@
-interface ResponseFormat {
+import { Command } from "../commands/command";
+import { CommandRegistry } from "../commands/registry";
+
+export interface ResponseJSONFormat {
   thoughts: {
     text: string;
     reasoning: string;
@@ -8,45 +11,19 @@ interface ResponseFormat {
   };
   command: {
     name: string;
-    args: {
-      argName: string;
-    };
+    args: Record<string, any>;
   };
 }
-
-type CommandFn = (...fnArgs: any[]) => any;
-
-export interface Command {
-  label: string;
-  name: string;
-  function?: CommandFn;
-  args?: any[];
-};
 
 export class PromptGenerator {
   private constraints: string[] = [];
   private commands: Command[] = [];
   private resources: string[] = [];
   private performanceEvaluation: string[] = [];
-  private goals: string[] = [];
-  private commandRegistry: any = undefined;
-  private name: string = 'Bob';
-  private role: string = 'AI';
-  private responseFormat: ResponseFormat = {
-    thoughts: {
-      text: 'thought',
-      reasoning: 'reasoning',
-      plan: '- short bulleted\n- list that conveys\n- long-term plan',
-      criticism: 'constructive self-criticism',
-      speak: 'thoughts summary to say to user',
-    },
-    command: {
-      name: 'command name',
-      args: {
-        argName: 'value',
-      },
-    },
-  };
+  public goals: string[] = [];
+  public commandRegistry?: CommandRegistry;
+  public name: string = 'Bob';
+  public role: string = 'AI';
 
   /**
    * Add a constraint to the constraints list
@@ -58,14 +35,7 @@ export class PromptGenerator {
   /**
    * Add a command to the commands list with a label, name, and optional arguments.
    */
-  public addCommand (label: string, name: string, args?: any[], fn?: ((...fnArgs: any[]) => any)) {
-    const command: Command = {
-      label,
-      name,
-      args,
-      function: fn,
-    };
-
+  public addCommand (command: Command) {
     this.commands.push(command);
   }
 
@@ -73,9 +43,9 @@ export class PromptGenerator {
    * Generate a formatted string representation of a command.
    */
   public generateCommandString (command: Command) {
-    const args = command.args ?? [];
-    const argsString = args.map((value, index) => `"${index}": "${value}"`).join(', ');
-    return `${command.label}: "${command.name}", args: ${argsString}`;
+    const args = command.args ?? {};
+    const argsString = Object.entries(args).map((value) => `"${value[0]}": "${value[1]}"`).join(', ');
+    return `${command.description}: "${command.name}", args: ${argsString}`;
   }
 
   /**
@@ -100,11 +70,11 @@ export class PromptGenerator {
   public generateNumberedList (items: Command[], itemType: 'command'): string;
   public generateNumberedList (items: any[], itemType: 'list' | 'command' = 'list') {
     if (itemType === 'command') {
-      let commandStrings: string[] = [];
+      let commandStrings: any[] = [];
       if (this.commandRegistry) {
-        for (const item of this.commandRegistry.commandsValues()) {
+        for (const item of this.commandRegistry.commands.values()) {
           if (item.enabled) {
-            commandStrings.push(item.toString());
+            items.push(item);
           }
         }
       }
@@ -127,7 +97,57 @@ export class PromptGenerator {
       + `${this.generateNumberedList(this.commands, 'command')}\n\n`
       + `Resources:\n${this.generateNumberedList(this.resources)}\n\n`
       + 'Performance Evaluation:\n'
-      + `${this.generateNumberedList(this.performanceEvaluation)}\n\n`;
+      + `${this.generateNumberedList(this.performanceEvaluation)}\n\n`
+      + 'You should only respond in JSON format matching the JSON schema described below: \nResponse Format:\n'
+      + `\`\`\` {
+        "type": "object",
+        "properties": {
+            "thoughts": {
+                "type": "object",
+                "properties": {
+                    "text": {"type": "string"},
+                    "reasoning": {"type": "string"},
+                    "plan": {"type": "string"},
+                    "criticism": {"type": "string"},
+                    "speak": {"type": "string"}
+                },
+                "required": ["text", "reasoning", "plan", "criticism", "speak"],
+                "additionalProperties": false
+            },
+            "command": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "args": {
+                        "type": "object"
+                    }
+                },
+                "required": ["name", "args"],
+                "additionalProperties": false
+            }
+        },
+        "required": ["thoughts", "command"],
+        "additionalProperties": false
+      }\`\`\``
+      /*
+      + '{\n'
+      + '\tthoughts: {'
+      + '\t\ttext: \'thought\','
+      + '\t\treasoning: \'reasoning\','
+      + '\t\tplan: \'- short bulleted\n- list that conveys\n- long-term plan\','
+      + '\t\tcriticism: \'constructive self-criticism\','
+      + '\t\tspeak: \'thoughts summary to say to user\''
+      + '\t},'
+      + '\tcommand: {'
+      + '\t\tname: \'command name\','
+      + '\t\targs: {'
+      + '\t\t\targName: \'value\''
+      + '\t\t}'
+      + '\t}'
+      + '}\n\n'
+      */
+     + '\n\n'
+      + 'Ensure the response can be parsed by JSON.parse method.';
   }
 
 }

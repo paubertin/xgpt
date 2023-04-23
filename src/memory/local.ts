@@ -4,10 +4,6 @@ import { Memory } from "./base";
 import nj from '@d4c/numjs';
 import fs from 'fs';
 
-function argSort (a: any, axis: number = -1, kind?: any, order?: any) {
-  // _wrapfunc(a, 'argsort', axis=axis, kind=kind, order=order)
-}
-
 const EMBED_DIM = 1536;
 
 function createDefaultEmbeddings () {
@@ -29,6 +25,10 @@ class CacheContent {
     }
   }
 }
+
+let decor = (v: any, i: any) => [v, i];          // set index to value
+let undecor = (a: any) => a[1];               // leave only index
+let argsort = (arr: any) => arr.map(decor).sort().map(undecor);
 
 export class LocalCache extends Memory {
   private _fileName: string;
@@ -78,6 +78,7 @@ export class LocalCache extends Memory {
     try {
       const file = await fs.promises.open(this._fileName, 'w');
       await file.write(JSON.stringify(this._data));
+      await file.close();
     }
     catch (err: any) {
       throw new Error('could not write to file');
@@ -93,18 +94,27 @@ export class LocalCache extends Memory {
     this._data = new CacheContent();
   }
 
-  public override async getRelevant(text: string, numRelevant: number) {
-    const embedding = await createEmbeddingWithAda(text);
+  public override async getRelevant(text: string, numRelevant: number): Promise<string[]> {
+    try {
 
-    const scores = nj.dot(this._data.embeddings, embedding);
-
-    console.error('scores', scores);
-
-    throw new Error("Method not implemented.");
-    const topKIndices = scores.hi(2);
+      const embedding = await createEmbeddingWithAda(text);
+      const scores = nj.dot(this._data.embeddings, embedding);
+      
+      let sorted: Int32Array = argsort(scores.selection.data);
+      const arr = Array.from(sorted).splice(-numRelevant);
+      arr.reverse();
+      return arr.map((i) => this._data.texts[i]);
+    }
+    catch (err) {
+      return [];
+    }
   }
-  public override getStats(): void {
-    throw new Error("Method not implemented.");
+
+  public override getStats() {
+    return {
+      length: this._data.texts.length,
+      shape: this._data.embeddings.shape,
+    };
   }
   
 }

@@ -4,6 +4,18 @@ import { Logger } from './logger';
 import nj from '@d4c/numjs';
 import argparse from 'argparse';
 import { getMemory } from './memory';
+import { constructMainAIConfig } from './prompts';
+import { Agent } from './agent/agent';
+import { OpenAI } from './openai';
+import { googleSearch } from './commands/googleSearch';
+import { google } from 'googleapis';
+import { CommandRegistry } from './commands/registry';
+import { command } from './commands/command';
+import { appendToFile, readFile, searchFiles, writeFile } from './commands/files';
+
+
+const GOOGLE_API = 'AIzaSyBoviFvXf5dJ2Cv86PrQ0gVD5-oNUHOF38';
+const PROJECTID = '84eff257e72a44135';
 
 const parser = new argparse.ArgumentParser({});
 
@@ -12,29 +24,69 @@ parser.add_argument('-c', '--continuous', { action: 'store_true', help: 'enable 
 export async function main () {
 
   const args = parser.parse_args();
-  console.log('args', args, args.continuous);
 
   Config.init();
+  Config.checkOpenAIAPIKey();
+  OpenAI.init();
 
-  const memory = getMemory();
+  const memory = getMemory(true);
 
-  // Logger.log('test debug');
-  // Logger.info('test info');
-  // Logger.trace('test trace');
-  // Logger.status('test status');
-  // Logger.error('test error');
-  // Config.checkOpenAIAPIKey();
+  const registry = new CommandRegistry();
 
-  let arr = nj.NdArray.new([[1,2],[3,4],[5,6]], 'float32');
+  registry.register(command(googleSearch, {
+    name: 'google',
+    description: 'Google search',
+    args: {
+      query: '<query>',
+    },
+    enabled: Config.googleApiKey !== undefined,
+  }));
 
-  console.log('arr', arr);
-  console.log('size', arr.size);
-  console.log('shape', arr.shape);
-  
-  arr = nj.NdArray.new([1,2,3,4]);
+  registry.register(command(writeFile, {
+    name: 'writeFile',
+    description: 'Write to file',
+    args: {
+      fileName: '<fileName>',
+      content: '<content>',
+    },
+  }));
 
-  console.log('arr', arr);
-  console.log('size', arr.size);
-  console.log('shape', arr.shape);
+  registry.register(command(appendToFile, {
+    name: 'appendToFile',
+    description: 'Append to file',
+    args: {
+      fileName: '<fileName>',
+      content: '<content>',
+      shouldLog: '<shouldLog>',
+    },
+  }));
+
+  registry.register(command(readFile, {
+    name: 'readFile',
+    description: 'Read a file',
+    args: {
+      fileName: '<fileName>',
+    },
+  }));
+
+  registry.register(command(searchFiles, {
+    name: 'searchFiles',
+    description: 'Search files in a directory',
+    args: {
+      directory: '<directory>',
+    },
+  }));
+
+  const aiConfig = await constructMainAIConfig();
+
+  aiConfig.commandRegistry = registry;
+
+  const systemPrompt = aiConfig.constructFullPrompt();
+  console.log('system prompt', systemPrompt);
+
+  const triggeringPrompt = 'Determine which next command to use, and respond using the format specified above:';
+  const agent = new Agent('', memory, [], 0, registry, aiConfig, systemPrompt, triggeringPrompt);
+
+  agent.startInteractionLoop();
 
 }

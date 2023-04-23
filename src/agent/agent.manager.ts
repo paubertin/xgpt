@@ -1,5 +1,6 @@
-import { IAgent, IMessage } from "../interfaces";
+import { IAgent } from "../interfaces";
 import { createChatCompletion } from "../llm.utils";
+import { Message } from "../openai";
 
 
 /**
@@ -22,7 +23,7 @@ export class AgentManager {
    */
   public static async createAgent (task: string, prompt: string, model: string) {
     const instance = this.instance;
-    const messages: IMessage[] = [
+    const messages: Message[] = [
       {
         role: 'user',
         content: prompt,

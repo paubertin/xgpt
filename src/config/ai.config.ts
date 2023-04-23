@@ -2,6 +2,8 @@ import { PromptGenerator } from "../prompts/generator";
 import path from 'path';
 import fs from 'fs';
 import { Config } from ".";
+import { buildDefaultPromptGenerator } from "../prompts";
+import { CommandRegistry } from "../commands/registry";
 
 const SAVE_FILE = path.join(process.cwd(), 'ai_settings.json');
 
@@ -9,11 +11,11 @@ const SAVE_FILE = path.join(process.cwd(), 'ai_settings.json');
  * A class object that contains the configuration information for the AI
  */
 export class AIConfig {
-  private goals: string[];
-  private name: string;
-  private role: string;
-  private promptGenerator?: PromptGenerator = undefined;
-  private commandRegistry?: any = undefined;
+  public goals: string[];
+  public name: string;
+  public role: string;
+  public promptGenerator!: PromptGenerator;
+  public commandRegistry?: CommandRegistry;
 
   public constructor (name: string = '', role: string = '', goals?: string[]) {
     this.name = name;
@@ -80,11 +82,12 @@ export class AIConfig {
     let fullPrompt = `You are ${promptGenerator.name}, ${promptGenerator.role}\n${promptStart}\n\nGOALS:\n\n`
 
     this.goals.forEach((goal, idx) => {
-      fullPrompt += `${idx + 1}. ${goal}`;
+      fullPrompt += `${idx + 1}. ${goal}\n`;
     });
 
     this.promptGenerator = promptGenerator;
-    fullPrompt += `\n\n${promptGenerator.generatePromptString()}`
+    fullPrompt += `\n${promptGenerator.generatePromptString()}`
+    return fullPrompt;
   }
 
 }

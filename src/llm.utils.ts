@@ -1,12 +1,37 @@
 import { Config } from "./config";
-import { IMessage } from "./interfaces";
-import { Colour, Logger } from "./logger";
-import { OpenAI } from "./openai";
+import { Logger } from "./logger";
+import { Message, Model, OpenAI } from "./openai";
 import * as openai from 'openai';
 import { sleepAsync } from "./sleep";
 
+export async function callAIFunction (func: string, args: any[], desc: string, model: Model = Config.smartLLMModel) {
+  args = args.map((a) => a ? a.toString() : 'None');
+  const argsString = args.join(', ');
+  const messages: Message[] = [
+    {
+      role: 'system',
+      content: "You are the following Typescript function: \n"
+      +"```\n"
+      +"/**\n"
+      +` * ${desc}\n`
+      +" */\n"
+      + `${func}\n`
+      +"```\n\n"
+      +"Only respond with your `return` value."
+    },
+    {
+      role: 'user',
+      content: argsString,
+    }
+  ];
+  return await createChatCompletion(messages, model, 0);
+}
+/**
+ * ${desc}
+ */
+
 export async function createChatCompletion (
-  messages: IMessage[],
+  messages: Message[],
   model: string,
   temperature = Config.temperature,
   maxTokens?: number) {
@@ -30,7 +55,10 @@ export async function createChatCompletion (
       })).data;
     }
     catch (err: any) {
-      console.error(err);
+      console.error(err.message);
+    }
+    if (response) {
+      break;
     }
     await sleepAsync(backoff * 1000);
   }
@@ -61,6 +89,9 @@ export async function createEmbeddingWithAda (text: string) {
     }
     catch (err: any) {
       console.error(err);
+    }
+    if (embedding) {
+      break;
     }
     await sleepAsync(backoff * 1000);
   }

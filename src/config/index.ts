@@ -1,5 +1,7 @@
 import * as dotenv from 'dotenv';
 import { Logger } from '../logger';
+import { XGPTPlugin } from '../plugins/plugin.template';
+import { Model } from '../openai';
 
 export class Config {
 
@@ -7,8 +9,8 @@ export class Config {
     if (this._initialized) {
       return;
     }
-    this._instance = new Config();
     dotenv.config();
+    this._instance = new Config();
     this._instance._init();
     this._initialized = true;
     return this._instance;
@@ -58,16 +60,20 @@ export class Config {
   public static get executeLocalCommands () { const instance = this.instance; return instance.executeLocalCommands; }
   public static get memoryBackend () { const instance = this.instance; return instance.memoryBackend; }
   public static get memoryIndex () { const instance = this.instance; return instance.memoryIndex; }
+  public static get plugins () { const instance = this.instance; return instance.plugins; }
+  public static get googleApiKey () { const instance = this.instance; return instance.googleApiKey; }
+  public static get customSearchEngineId () { const instance = this.instance; return instance.customSearchEngineId; }
+  public static get restrictToWorkspace () { const instance = this.instance; return instance.restrictToWorkspace; }
 
   private constructor () {
     this.debugMode = false;
-    this.continuousMode = false;
+    this.continuousMode = true;
     this.continuousLimit = 0;
     this.speakMode = false;
     this.skipReprompt = false;
     this.allowDownloads = false;
 
-    this.aiSettingsFile = this.getEnv('AI_SETTINGS_FILE', 'ai_settings.yaml');
+    this.aiSettingsFile = this.getEnv('AI_SETTINGS_FILE', 'ai_settings.json');
     this.fastLLMModel = this.getEnv('FAST_LLM_MODEL', 'gpt-3.5-turbo');
     this.smartLLMModel = this.getEnv('SMART_LLM_MODEL', 'gpt-4');
     this.fastTokenLimit = this.getEnv('FAST_TOKEN_LIMIT', 4000);
@@ -81,6 +87,10 @@ export class Config {
 
     this.memoryBackend = this.getEnv('MEMORY_BACKEND', 'local');
     this.memoryIndex = this.getEnv('MEMORY_INDEX', 'x-gpt');
+    
+    this.googleApiKey = this.getEnv('GOOGLE_API_KEY');
+    this.customSearchEngineId = this.getEnv('CUSTOM_SEARCH_ENGINE_ID');
+    this.restrictToWorkspace = this.getEnv('RESTRICT_TO_WORKSPACE', true);
   }
   
   private getEnv<T> (key: string): T | undefined
@@ -123,8 +133,8 @@ export class Config {
   private skipReprompt: boolean;
   private allowDownloads: boolean;
   private aiSettingsFile: string;
-  private fastLLMModel: string;
-  private smartLLMModel: string;
+  private fastLLMModel: Model;
+  private smartLLMModel: Model;
   private fastTokenLimit: number;
   private smartTokenLimit: number;
   private browseChunkMaxLength: number;
@@ -134,4 +144,8 @@ export class Config {
   private executeLocalCommands: boolean;
   private memoryBackend: string;
   private memoryIndex: string;
+  private googleApiKey?: string;
+  private customSearchEngineId?: string;
+  private plugins: XGPTPlugin[] = [];
+  private restrictToWorkspace: boolean;
 }
