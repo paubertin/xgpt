@@ -14,9 +14,6 @@ import { command } from './commands/command';
 import { appendToFile, readFile, searchFiles, writeFile } from './commands/files';
 
 
-const GOOGLE_API = 'AIzaSyBoviFvXf5dJ2Cv86PrQ0gVD5-oNUHOF38';
-const PROJECTID = '84eff257e72a44135';
-
 const parser = new argparse.ArgumentParser({});
 
 parser.add_argument('-c', '--continuous', { action: 'store_true', help: 'enable continous mode',  });
