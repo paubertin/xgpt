@@ -16,18 +16,18 @@ export async function chatWithAI (prompt: string, userInput: string, fullMessage
 
       console.log('Memory stats', permanentMemory.getStats());
 
-      let context = generateContext(prompt, relevantMemory, fullMessageHistory, model);
+      let context = await generateContext(prompt, relevantMemory, fullMessageHistory, model);
 
       while (context.currentTokensUsed > 2500) {
         relevantMemory = relevantMemory.splice(-1);
-        context = generateContext(prompt, relevantMemory, fullMessageHistory, model);
+        context = await generateContext(prompt, relevantMemory, fullMessageHistory, model);
       }
 
-      context.currentTokensUsed += countMessageTokens([createChatMessage('user', userInput)], model);
+      context.currentTokensUsed += await countMessageTokens([createChatMessage('user', userInput)], model);
 
       while (context.nextMessageToAddIndex >=0) {
         const messageToAdd = fullMessageHistory[context.nextMessageToAddIndex];
-        const tokensToAdd = countMessageTokens([ messageToAdd ], model);
+        const tokensToAdd = await countMessageTokens([ messageToAdd ], model);
         if (context.currentTokensUsed + tokensToAdd > sendTokenLimit) {
           break;
         }
@@ -108,7 +108,7 @@ export function createChatMessage  (role: Role, content: string): Message {
 /**
  * Create a chat message with the given role and content.
  */
-function generateContext (prompt: string, relevantMemory: string[], fullMessageHistory: Message[], model: Model) {
+async function generateContext (prompt: string, relevantMemory: string[], fullMessageHistory: Message[], model: Model) {
   const currentContext = [
     createChatMessage('system', prompt),
     createChatMessage('system', `The current time and date is ${(new Date()).toLocaleString()}`),
@@ -122,7 +122,7 @@ function generateContext (prompt: string, relevantMemory: string[], fullMessageH
 
   return {
     nextMessageToAddIndex: fullMessageHistory.length - 1,
-    currentTokensUsed: countMessageTokens(currentContext, model),
+    currentTokensUsed: await countMessageTokens(currentContext, model),
     insertionIndex: currentContext.length,
     currentContext,
   };

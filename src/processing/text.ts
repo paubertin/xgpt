@@ -29,7 +29,57 @@ function createMessage (chunk: string, question: string): Message {
   };
 }
 
-function* splitText (sentences: string[], maxLength: number = Config.browseChunkMaxLength, model = Config.fastLLMModel, question: string = ''): Generator<string> {
+async function splitText (text: string, maxLength: number = Config.browseChunkMaxLength, model = Config.fastLLMModel, question: string = '') {
+  const flattenedParagraphs = text.split('\n').join(' ');
+  const sentences = await Python.parseSentences(flattenedParagraphs);
+
+  const chunks: string[] = [];
+  let current: string = '';
+
+  let i = 0;
+  for (const sentence of sentences) {
+    i++;
+    // console.log(`Processing sentence ${i}/${sentences.length}, current length: ${current.length}`);
+    const messageWithAdditionalSentence = [
+      createMessage(`${current ? current + ' ' : ''}${sentence}`, question),
+    ];
+
+    try {
+      let expectedTokenUsage = await tokenUsageOfChunk(messageWithAdditionalSentence, model) + 1;
+      // console.log(`Expected tokens usage: ${expectedTokenUsage} (max = ${maxLength})`);
+
+      if (expectedTokenUsage <= maxLength) {
+        // chunks.push(sentence);
+        current = (current ? (current + ' ') : '') + sentence;
+      }
+      else {
+        // console.log('pushing chunk');
+        chunks.push(current);
+        current = '';
+        const messageThisSentenceOnly = [
+          createMessage(sentence, question),
+        ];
+        expectedTokenUsage = await tokenUsageOfChunk(messageThisSentenceOnly, model) + 1;
+
+        if (expectedTokenUsage > maxLength) {
+          throw new Error(`Sentence is too long in webpage: ${expectedTokenUsage} tokens`);
+        }
+      }
+    }
+    catch (err: any) {
+      // console.error('Error splitting text...', err);
+      throw new Error(err);
+    }
+  }
+  if (current !== '') {
+    chunks.push(current);
+  }
+
+  return chunks;
+}
+
+/*
+function* splitTextGenerator (sentences: string[], maxLength: number = Config.browseChunkMaxLength, model = Config.fastLLMModel, question: string = ''): Generator<string> {
   let currentChunk: string[] = [];
 
   for (const sentence in sentences) {
@@ -60,8 +110,9 @@ function* splitText (sentences: string[], maxLength: number = Config.browseChunk
     yield currentChunk.join(' ');
   }
 }
+*/
 
-function tokenUsageOfChunk (messages: Message[], model: TiktokenModel) {
+async function tokenUsageOfChunk (messages: Message[], model: TiktokenModel) {
   return countMessageTokens(messages, model);
 }
 
@@ -75,29 +126,28 @@ export async function summarizeText (url: string, text: string, question: string
   console.log(`Text length: ${textLength} chartacters.`);
 
   const summaries: string[] = [];
-  const flattenedParagraphs = text.split('\n').join(' ');
-  const sentences = await Python.parseSentences(flattenedParagraphs);
-  Logger.log('sentences', sentences);
-  const chunks = splitText(sentences, Config.browseChunkMaxLength, model, question);
+  // const flattenedParagraphs = text.split('\n').join(' ');
+  // const sentences = await Python.parseSentences(flattenedParagraphs);
+  // Logger.log('sentences', sentences);
+  const chunks = await splitText(text, Config.browseChunkMaxLength, model, question);
 
-  const chunksArray = Array.from(chunks);
-
-  const scrollRatio = 1 / chunksArray.length;
+  const scrollRatio = 1 / chunks.length;
 
   let i: number = 0;
-  for (const chunk of chunksArray) {
+  for (const chunk of chunks) {
     if (driver) {
       await scrollToPercentage(driver, scrollRatio * i);
     }
-    console.log(`Adding chunk ${i+1} / ${chunksArray.length} to memory`);
+    console.log(`Adding chunk ${i+1} / ${chunks.length} to memory`);
     let memoryToAdd = `Source: ${url}\n Raw content part#${i+1}: ${chunk}`;
     const memory = getMemory();
     await memory.add(memoryToAdd);
 
     const messages = [ createMessage(chunk, question) ];
-    const tokens = tokenUsageOfChunk(messages, model);
-    console.log(`Summarizing chunk ${i+1} / ${chunksArray.length} of length ${chunk.length} characters, or ${tokens} tokens`);
+    const tokens = await tokenUsageOfChunk(messages, model);
+    console.log(`Summarizing chunk ${i+1} / ${chunks.length} of length ${chunk.length} characters, or ${tokens} tokens`);
 
+    console.log('messages', messages);
     const summary = await createChatCompletion(messages, model);
     summaries.push(summary);
     console.log(`Adding chunk ${i+1} summary to memory, of length ${summary.length} characters`);
@@ -106,7 +156,7 @@ export async function summarizeText (url: string, text: string, question: string
     i += 1;
   }
 
-  console.log(`Summarized ${chunksArray.length} chunks`);
+  console.log(`Summarized ${chunks.length} chunks`);
 
   const combinedSummary = summaries.join('\n');
   const messages = [ createMessage(combinedSummary, question) ];

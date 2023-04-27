@@ -20,7 +20,7 @@ export default async (
       JSON.stringify({ query: query.replace(/'|"/gim, ""), tag: TAG })
     );
 
-    pyshell.on("message", function (message) {
+    pyshell.on('message', (message) => {
       if (!isSent) {
         const { results, tag } = JSON.parse(message);
 

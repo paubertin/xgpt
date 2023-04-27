@@ -35,6 +35,49 @@ export class Python {
     );
   }
 
+  /*
+export interface Options extends SpawnOptions {
+    mode?: 'text' | 'json' | 'binary';
+    formatter?: string | ((param: string) => any);
+    parser?: string | ((param: string) => any);
+    stderrParser?: string | ((param: string) => any);
+    encoding?: BufferEncoding;
+    pythonPath?: string;
+    pythonOptions?: string[];
+    scriptPath?: string;
+    args?: string[];
+}
+  */
+
+  public static async sendMessage (msg: any) {
+    
+    return new Promise<any>(async (resolve, reject) => {
+      const shell = new PythonShell('./src/spacy/test.py');
+      shell.send(msg);
+      shell.on('message', (...args: any[]) => {
+        console.log('on message', args);
+        shell.end((err, exitCode, exitSignal) => {
+          console.log('END SHELL');
+          console.log('err', err);
+          console.log('exitCode', exitCode);
+          console.log('exitSignal', exitSignal);
+        });
+        resolve(args);
+      });
+      shell.on('error', (err) => {
+        console.error('error', err);
+        reject(err);
+      });
+      shell.on('pythonError', (err) => {
+        console.error('python error', err);
+        reject(err);
+      });
+      shell.on('close', () => {
+        console.log('closing shell...');
+      });
+    });
+  }
+
   public static async parseSentences (text: string = '', timeoutLimit: number = 30000, index: number = 0) {
     if (!text || text.length <= 0) {
       throw new Error('Input text invalid');
@@ -74,48 +117,51 @@ export class Python {
   }
 
   private async _init () {
-    this.pyShell.on('message', (message) => {
-      console.log('shell message', message);
-      if (message === 'ready') {
-        this.ready = true;
-        console.log('Python ready');
-        this.pyShell.removeAllListeners();
-      }
-    });
-
-    process.on('SIGINT', () => {
-      this.pyShell.end((err, code, signal) => {
-        if (err) throw err;
-        //   console.log("The exit code was: " + code);
-        //   console.log("The exit signal was: " + signal);
-        console.log("finished");
+    return new Promise<boolean>((resolve, reject) => {
+      this.pyShell.on('message', (message) => {
+        console.log('shell message', message);
+        if (message === 'ready') {
+          this.ready = true;
+          console.log('Python ready');
+          this.pyShell.removeAllListeners();
+          resolve(true);
+        }
       });
-      process.exit(0);
-    });
 
-    process.on('exit', () => {
-      this.pyShell.end((err, code, signal) => {
-        if (err) throw err;
-        //   console.log("The exit code was: " + code);
-        //   console.log("The exit signal was: " + signal);
-        console.log("finished");
+      process.on('SIGINT', () => {
+        this.pyShell.end((err, code, signal) => {
+          if (err) throw err;
+          //   console.log("The exit code was: " + code);
+          //   console.log("The exit signal was: " + signal);
+          console.log("finished");
+        });
+        process.exit(0);
       });
-      process.exit(0);
-    });
 
-    process.on('uncaughtException', (exception) => {
-      console.log(exception);
-
-      this.pyShell.end((err, code, signal) => {
-        if (err) throw err;
-        //   console.log("The exit code was: " + code);
-        //   console.log("The exit signal was: " + signal);
-        console.log("finished");
+      process.on('exit', () => {
+        this.pyShell.end((err, code, signal) => {
+          if (err) throw err;
+          //   console.log("The exit code was: " + code);
+          //   console.log("The exit signal was: " + signal);
+          console.log("finished");
+        });
+        process.exit(0);
       });
-      process.exit(0);
+
+      process.on('uncaughtException', (exception) => {
+        console.log(exception);
+
+        this.pyShell.end((err, code, signal) => {
+          if (err) throw err;
+          //   console.log("The exit code was: " + code);
+          //   console.log("The exit signal was: " + signal);
+          console.log("finished");
+        });
+        process.exit(0);
+      });
+    
+      this.pyShell.send('check');
     });
-  
-    this.pyShell.send('check');
   }
 
   private async installPackages () {

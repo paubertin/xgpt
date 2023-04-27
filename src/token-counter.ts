@@ -1,11 +1,14 @@
 import nodeTikToken from 'tiktoken-node';
 import { Message, Model } from './openai';
 import { NotImplementedError } from '@d4c/numjs/build/main/lib/errors';
+import { Python } from './python';
 
 /**
  * Returns the number of tokens used by a list of messages.
  */
-export function countMessageTokens (messages: Message[], model: Model = 'gpt-3.5-turbo-0301'): number {
+export async function countMessageTokens (messages: Message[], model: Model = 'gpt-3.5-turbo-0301') {
+  return await Python.countMessageTokens(messages, model);
+  /*
   let encoding: nodeTikToken.Encoding;
   let tokensPerMessage: number;
   let tokensPerName: number;
@@ -49,4 +52,5 @@ export function countMessageTokens (messages: Message[], model: Model = 'gpt-3.5
   }
   numTokens += 3;
   return numTokens;
+  */
 }

@@ -14,6 +14,8 @@ import path from 'path';
 import fs from 'fs';
 import { browseWebsite } from './commands/web';
 import { Python } from './spacy';
+import { deleteAgent, listAgents, messageAgent, startAgent } from './commands/agents';
+import { AgentManager } from './agent/agent.manager';
 
 const parser = new argparse.ArgumentParser({});
 
@@ -26,6 +28,7 @@ export async function main () {
   const args = parser.parse_args();
 
   Config.init();
+  AgentManager.init();
   Config.checkOpenAIAPIKey();
   OpenAI.init();
   await Python.init();
@@ -92,6 +95,40 @@ export async function main () {
     args: {
       url: '<url>',
       question: '<what_you_want_to_find_on_website>',
+    },
+  }));
+
+  registry.register(command(startAgent, {
+    name: 'startAgent',
+    description: 'Start a GPT agent with a given name, task, and prompt',
+    args: {
+      name: '<name>',
+      task: '<task>',
+      prompt: '<prompt>',
+    },
+  }));
+
+  registry.register(command(messageAgent, {
+    name: 'messageAgent',
+    description: 'Message an agent with a given key and message',
+    args: {
+      key: '<key>',
+      message: '<message>',
+    },
+  }));
+
+  registry.register(command(listAgents, {
+    name: 'listAgents',
+    description: 'List all agents available',
+    args: {
+    },
+  }));
+
+  registry.register(command(deleteAgent, {
+    name: 'deleteAgent',
+    description: 'Delete an agent with a given key',
+    args: {
+      key: '<key>',
     },
   }));
 

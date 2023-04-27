@@ -96,7 +96,7 @@ export class Config {
     this.smartLLMModel = this.getEnv('SMART_LLM_MODEL', 'gpt-4');
     this.fastTokenLimit = this.getEnv('FAST_TOKEN_LIMIT', 4000);
     this.smartTokenLimit = this.getEnv('SMART_TOKEN_LIMIT', 8000);
-    this.browseChunkMaxLength = this.getEnv('BROWSE_CHUNK_MAX_LENGTH', 8192);
+    this.browseChunkMaxLength = this.getEnv('BROWSE_CHUNK_MAX_LENGTH', 3000);
     this.browseSpacyLanguageModel = this.getEnv('BROWSE_SPACY_LANGUAGE_MODEL', 'en_core_web_sm');
 
     this.openAIAPIKey = this.getEnv('OPENAI_API_KEY');
