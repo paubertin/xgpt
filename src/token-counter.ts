@@ -1,4 +1,4 @@
-import tiktoken from '@dqbd/tiktoken';
+import nodeTikToken from 'tiktoken-node';
 import { Message, Model } from './openai';
 import { NotImplementedError } from '@d4c/numjs/build/main/lib/errors';
 
@@ -6,15 +6,15 @@ import { NotImplementedError } from '@d4c/numjs/build/main/lib/errors';
  * Returns the number of tokens used by a list of messages.
  */
 export function countMessageTokens (messages: Message[], model: Model = 'gpt-3.5-turbo-0301'): number {
-  let encoding: tiktoken.Tiktoken;
+  let encoding: nodeTikToken.Encoding;
   let tokensPerMessage: number;
   let tokensPerName: number;
   try {
-    encoding = tiktoken.encoding_for_model(model);
+    encoding = nodeTikToken.encodingForModel(model);
   }
   catch (_) {
     console.warn("Warning: model not found. Using cl100k_base encoding.")
-    encoding = tiktoken.get_encoding('cl100k_base');
+    encoding = nodeTikToken.getEncoding('cl100k_base');
   }
   switch (model) {
     case 'gpt-3.5-turbo': {

@@ -1,7 +1,6 @@
 import { google } from 'googleapis';
 import { Config } from '../config';
 import { Command, command } from './command';
-import { fnDecorator } from 'pure-function-decorator';
 
 const cse = google.customsearch('v1').cse;
 

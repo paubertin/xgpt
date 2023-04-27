@@ -63,7 +63,7 @@ export async function chatWithAI (prompt: string, userInput: string, fullMessage
 
       const tokensRemaining = tokenLimit - context.currentTokensUsed;
 
-      const debug = false;
+      const debug = true;
       if (debug) {
         console.debug('Token limit:', tokenLimit);
         console.debug('Send Token Count:', context.currentTokensUsed);
@@ -108,12 +108,17 @@ export function createChatMessage  (role: Role, content: string): Message {
 /**
  * Create a chat message with the given role and content.
  */
-function generateContext (prompt: string, relevantMemory: any, fullMessageHistory: Message[], model: Model) {
+function generateContext (prompt: string, relevantMemory: string[], fullMessageHistory: Message[], model: Model) {
   const currentContext = [
     createChatMessage('system', prompt),
-    createChatMessage('system', `The current time and date is ${(new Date()).toLocaleDateString()}`),
-    createChatMessage('system', `This reminds you of these events from your past:\n${relevantMemory}\n\n`),
+    createChatMessage('system', `The current time and date is ${(new Date()).toLocaleString()}`),
   ];
+
+  if (relevantMemory.length) {
+    currentContext.push(
+      createChatMessage('system', `This reminds you of these events from your past:\n${relevantMemory}\n\n`),
+    );
+  }
 
   return {
     nextMessageToAddIndex: fullMessageHistory.length - 1,

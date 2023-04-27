@@ -15,6 +15,24 @@ export interface ResponseJSONFormat {
   };
 }
 
+export const JSON_SCHEMA = `
+{
+  "command": {
+      "name": "command name",
+      "args":{
+          "arg name": "value"
+      }
+  },
+  "thoughts":
+  {
+      "text": "thought",
+      "reasoning": "reasoning",
+      "plan": "- short bulleted\n- list that conveys\n- long-term plan",
+      "criticism": "constructive self-criticism",
+      "speak": "thoughts summary to say to user"
+  }
+}`;
+
 export class PromptGenerator {
   private constraints: string[] = [];
   private commands: Command[] = [];
@@ -98,8 +116,10 @@ export class PromptGenerator {
       + `Resources:\n${this.generateNumberedList(this.resources)}\n\n`
       + 'Performance Evaluation:\n'
       + `${this.generateNumberedList(this.performanceEvaluation)}\n\n`
-      + 'You should only respond in JSON format matching the JSON schema described below: \nResponse Format:\n'
-      + `\`\`\` {
+      + 'You should only respond in JSON format as described below without any other commentary.\n\nResponse Format:\n'
+      + JSON_SCHEMA
+      /*
+      + `{
         "type": "object",
         "properties": {
             "thoughts": {
@@ -128,7 +148,8 @@ export class PromptGenerator {
         },
         "required": ["thoughts", "command"],
         "additionalProperties": false
-      }\`\`\``
+      }`
+      */
       /*
       + '{\n'
       + '\tthoughts: {'
@@ -147,7 +168,7 @@ export class PromptGenerator {
       + '}\n\n'
       */
      + '\n\n'
-      + 'Ensure the response can be parsed by JSON.parse method.';
+      + 'Ensure the response can be parsed by Javascript JSON.parse method.';
   }
 
 }

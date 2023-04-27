@@ -5,19 +5,20 @@ import * as openai from 'openai';
 import { sleepAsync } from "./sleep";
 
 export async function callAIFunction (func: string, args: any[], desc: string, model: Model = Config.smartLLMModel) {
-  args = args.map((a) => a ? a.toString() : 'None');
+  args = args.map((arg) => arg !== null && arg !== undefined ? `${String(arg)}` : 'None');
   const argsString = args.join(', ');
   const messages: Message[] = [
     {
       role: 'system',
-      content: "You are the following Typescript function: \n"
-      +"```\n"
-      +"/**\n"
-      +` * ${desc}\n`
-      +" */\n"
-      + `${func}\n`
-      +"```\n\n"
-      +"Only respond with your `return` value."
+      content: `You are the following Typescript function:
+\`\`\`
+/**
+ * ${desc}
+  */
+${func}
+\`\`\`
+
+Only respond with your \`return\` value.`
     },
     {
       role: 'user',
@@ -30,6 +31,10 @@ export async function callAIFunction (func: string, args: any[], desc: string, m
  * ${desc}
  */
 
+/**
+ * regergerg
+ ergreger
+ */
 export async function createChatCompletion (
   messages: Message[],
   model: string,

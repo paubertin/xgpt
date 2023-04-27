@@ -64,10 +64,28 @@ export class Config {
   public static get googleApiKey () { const instance = this.instance; return instance.googleApiKey; }
   public static get customSearchEngineId () { const instance = this.instance; return instance.customSearchEngineId; }
   public static get restrictToWorkspace () { const instance = this.instance; return instance.restrictToWorkspace; }
+  
+  public static get workspacePath () {
+    const instance = this.instance;
+    const res = instance.workspacePath;
+    if (!res) { throw new Error('workspacePath has ot been set') }
+    return res;
+  }
+
+  public static set workspacePath (p: string) { const instance = this.instance; instance.workspacePath = p; }
+
+  public static get fileLoggerPath () {
+    const instance = this.instance;
+    const res = instance.fileLoggerPath;
+    if (!res) { throw new Error('fileLoggerPath has ot been set') }
+    return res;
+  }
+
+  public static set fileLoggerPath (p: string) { const instance = this.instance; instance.fileLoggerPath = p; }
 
   private constructor () {
     this.debugMode = false;
-    this.continuousMode = true;
+    this.continuousMode = false;
     this.continuousLimit = 0;
     this.speakMode = false;
     this.skipReprompt = false;
@@ -148,4 +166,7 @@ export class Config {
   private customSearchEngineId?: string;
   private plugins: XGPTPlugin[] = [];
   private restrictToWorkspace: boolean;
+
+  private workspacePath?: string;
+  private fileLoggerPath?: string;
 }

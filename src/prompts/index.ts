@@ -1,6 +1,7 @@
 import { Command } from "../commands/command";
 import { Config } from "../config";
 import { AIConfig } from "../config/ai.config";
+import { Logger } from "../log/logger";
 import { promptUser } from "../setup";
 import { PromptGenerator } from "./generator";
 import readline from 'readline/promises';
@@ -25,8 +26,8 @@ export function buildDefaultPromptGenerator () {
   promptGenerator.addConstraint('Exclusively use the commands listed in double quotes e.g. "command name"');
 
   const commands: Command[] = [
-    new Command('do_nothing', 'Do Nothing'),
-    new Command('task_complete', 'Task Complete (Shutdown)', undefined, { reason: '<reason>' }),
+    new Command('doNothing', 'Do Nothing'),
+    new Command('taskComplete', 'Task Complete (Shutdown)', undefined, { reason: '<reason>' }),
   ];
 
   commands.forEach((command) => {
@@ -66,7 +67,6 @@ export async function constructMainAIConfig () {
   else if (config.name) {
     console.log(`Welcome back! Would you like me to return to being ${config.name}.`);
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-    console.log(config);
     const answer = await rl.question('Continue with last settings?'
     + '\n'
     + `Name:  ${config.name}`
@@ -84,6 +84,14 @@ export async function constructMainAIConfig () {
   if (!config.name) {
     config = await promptUser();
     config.save(Config.aiSettingsFile);
+  }
+
+  Logger.log(`${config.name} has been created with the following details:`);
+  Logger.log(`  Name: ${config.name}`);
+  Logger.log(`  Role: ${config.role}`);
+  Logger.log(`  Goals:`);
+  for (const goal of config.goals) {
+    Logger.log(`   - ${goal}`);
   }
 
   return config;

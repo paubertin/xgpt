@@ -9,6 +9,10 @@ import { Message } from "../openai";
 import ajv from 'ajv';
 import Joi from 'joi';
 import readline from 'readline/promises';
+import { Workspace } from "../workspace";
+import { Colour } from "../logger";
+import { callAIFunction } from "../llm.utils";
+import { JSON_SCHEMA } from "../prompts/generator";
 
 const schema = (new ajv()).compile({
   "type": "object",
@@ -41,24 +45,58 @@ const schema = (new ajv()).compile({
   "additionalProperties": false
 });
 
+interface AgentOptions {
+  aiName: string;
+  memory: Memory;
+  fullMessageHistory: Message[];
+  nextActionCount: number;
+  commandRegistry: CommandRegistry;
+  config: AIConfig;
+  systemPrompt: string;
+  triggeringPrompt: string;
+  workspaceDirectory: string;
+}
+
 export class Agent {
 
-  public constructor (
-    public name: string,
-    public memory: Memory,
-    public fullMessageHistory: Message[],
-    public nextActionCount: number,
-    public commandRegistry: CommandRegistry,
-    public config: AIConfig,
-    public systemPrompt: string,
-    public triggeringPrompt: string,
-  ) {
+  public aiName: string;
+  public memory: Memory;
+  public fullMessageHistory: Message[];
+  public nextActionCount: number;
+  public commandRegistry: CommandRegistry;
+  public config: AIConfig;
+  public systemPrompt: string;
+  public triggeringPrompt: string;
+  public workspace: Workspace;
+
+  public constructor (opts: AgentOptions) {
+    this.aiName = opts.aiName;
+    this.memory = opts.memory;
+    this.fullMessageHistory = opts.fullMessageHistory;
+    this.nextActionCount = opts.nextActionCount;
+    this.commandRegistry = opts.commandRegistry;
+    this.config = opts.config;
+    this.systemPrompt = opts.systemPrompt;
+    this.triggeringPrompt = opts.triggeringPrompt;
+    this.workspace = new Workspace(opts.workspaceDirectory, Config.restrictToWorkspace);
+  }
+
+  private _resolvePathlikeCommandArgs (commandArgs: Record<string, any>) {
+    if ('directory' in commandArgs && ['', '/'].includes(commandArgs.directory)) {
+      commandArgs.directory = this.workspace.root;
+    }
+    else {
+      ['fileName', 'directory', 'clonePath'].forEach((pathLike) => {
+        if (pathLike in commandArgs) {
+          commandArgs[pathLike] = this.workspace.getPath(commandArgs[pathLike]);
+        }
+      });
+    }
+    return commandArgs;
   }
 
   public async startInteractionLoop() {
     let loopCount = 0;
-    let commandName: string | undefined = undefined;
-    let args: any[] | undefined = undefined;
     let userInput: string = '';
 
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
@@ -79,10 +117,10 @@ export class Agent {
       }
       let json: any;
       try {
-        json = JSON.parse(assistantReply.replaceAll('\n', ''));
+        json = await fixAndParseJson(assistantReply, true);
       }
       catch (err: any) {
-        console.error('JSON parse failed...', assistantReply, typeof assistantReply);
+        console.error('JSON parse failed...', assistantReply);
         break;
       }
       const validated = schema(json);
@@ -90,12 +128,13 @@ export class Agent {
         console.log('unvalid json', json);
         // break;
       }
-      printAssistantThoughts(this.name, json);
+      printAssistantThoughts(this.aiName, json);
       let { commandName, args } = getCommand(json);
+      args = this._resolvePathlikeCommandArgs(args);
 
       if (!Config.continuousMode && this.nextActionCount === 0) {
         console.log(`NEXT ACTION: COMMAND = ${commandName}  ARGUMENTS = ${JSON.stringify(args)}`);
-        console.log(`Enter 'y' to authorise command, 'y -N' to run N continuous commands, 'n' to exit program, or enter feedback for ${this.name}...`);
+        console.log(`Enter 'y' to authorise command, 'y -N' to run N continuous commands, 'n' to exit program, or enter feedback for ${this.aiName}...`);
         while (true) {
           const input = await rl.question('Input:');
           if (input.toLowerCase().trim() === 'y') {
@@ -123,7 +162,7 @@ export class Agent {
           }
           else {
             userInput = input;
-            commandName = 'human_feedback';
+            commandName = 'humanFeedback';
             break;
           }
         }
@@ -143,7 +182,7 @@ export class Agent {
       if (commandName && commandName.toLowerCase().startsWith('error')) {
         result = `Command ${commandName} threw the following error: ${JSON.stringify(args)}`;
       }
-      else if (commandName === 'human_feedback') {
+      else if (commandName === 'humanFeedback') {
         result = `Human feedback: ${userInput}`;
       }
       else {
@@ -151,9 +190,9 @@ export class Agent {
           if (!plugin.canHandlePreCommand()) {
             continue;
           }
-          const p = plugin.preCommand(commandName, args);
-          commandName = p.commandName;
-          args = p.args;
+          const pluginResult = plugin.preCommand(commandName, args);
+          commandName = pluginResult.commandName;
+          args = pluginResult.args;
         }
         const commandResult = await executeCommand(this.commandRegistry, commandName, args, this.config.promptGenerator);
 
@@ -171,7 +210,7 @@ export class Agent {
         }
       }
 
-      if (commandName !== 'do_nothing') {
+      if (commandName !== 'doNothing') {
         this.memory.add(`Assistant reply: ${assistantReply}\nResult: ${result}\nHuman feedback: ${userInput}`);
 
         if (result) {
@@ -184,5 +223,86 @@ export class Agent {
         }
       }
     }
+  }
+}
+
+async function fixAndParseJson (jsonString: string, tryToFixWithGpt: boolean = true) {
+  try {
+    return JSON.parse(jsonString.replaceAll('\n', '\\n'));
+  }
+  catch (err: any) {
+    console.error('\nFailed to parse JSON, trying multiple techniques...', jsonString);
+    console.error('\n');
+    try {
+      // Escaping newlines in the string field values
+      const regex = /"(?:[^"\\]|\\[^n])*?"/g;
+      const escapedString = jsonString.replace(regex, (match) =>
+        match.replace(/\n/g, "\\\\n")
+      );
+      return JSON.parse(escapedString);
+    }
+    catch (err: any) {
+      try {
+        const braceIndex = jsonString.indexOf("{");
+        jsonString = jsonString.slice(braceIndex);
+        const lastBraceIndex = jsonString.lastIndexOf("}");
+        jsonString = jsonString.slice(0, lastBraceIndex + 1);
+        return JSON.parse(jsonString);
+      }
+      catch (err: any) {
+        if (tryToFixWithGpt) {
+          console.warn(
+            "Warning: Failed to parse AI output, attempting to fix.\n If you see this warning frequently, it's likely that your prompt is confusing the AI. Try changing it up slightly."
+          );
+          const aiFixedJson = await fixJson(jsonString, JSON_SCHEMA, false);
+          if (aiFixedJson !== "failed") {
+            return JSON.parse(aiFixedJson);
+          }
+          else {
+            console.error("Failed to fix ai output, telling the AI.");
+            return jsonString;
+          }
+        }
+        else {
+          throw err;
+        }
+      }
+    }
+  }
+}
+
+async function fixJson(
+  jsonString: string,
+  schema: string,
+  debug = false
+): Promise<string | "failed"> {
+  const functionString =
+    "function fixJson(jsonString: string, schema:string): string {";
+  const args = [jsonString, schema];
+  const description = `Fixes the provided JSON string to make it parseable and fully complient with the provided schema.
+If an object or field specifed in the schema isn't contained within the correct JSON, it is ommited.
+This function is brilliant at guessing when the format is incorrect.`;
+
+  if (jsonString[0] !== "`") {
+    jsonString = "```json\n" + jsonString + "\n```";
+  }
+  const resultString = await callAIFunction(
+    functionString,
+    args,
+    description,
+    Config.smartLLMModel);
+  if (debug) {
+    console.debug("------------ JSON FIX ATTEMPT ---------------");
+    console.debug(`Original JSON: ${jsonString}`);
+    console.debug("-----------");
+    console.debug(`Fixed JSON: ${resultString}`);
+    console.debug("----------- END OF FIX ATTEMPT ----------------");
+  }
+  try {
+    JSON.parse(resultString);
+    return resultString;
+  }
+  catch {
+    return "failed";
   }
 }

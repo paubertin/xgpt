@@ -1,0 +1,115 @@
+import { Builder, By, Key, ThenableWebDriver, until } from 'selenium-webdriver';
+import { Message } from '../openai';
+import { Config } from '../config';
+import spacy from 'spacy-nlp';
+import { Python } from '../spacy';
+import { countMessageTokens } from '../token-counter';
+import { TiktokenModel } from '@dqbd/tiktoken';
+import { getMemory } from '../memory';
+import { createChatCompletion } from '../llm.utils';
+import { Logger } from '../log/logger';
+
+async function scrollToPercentage (driver: ThenableWebDriver, ratio: number) {
+  try {
+
+    if (ratio < 0 || ratio > 1) {
+      throw new Error('Percentage should be between 0 and 1');
+    }
+    await driver.executeScript(`window.scrollTo(0, document.body.scrollHeight * ${ratio})`);
+  }
+  catch (e) {
+    Logger.error(e);
+  }
+}
+
+function createMessage (chunk: string, question: string): Message {
+  return {
+    role: 'user',
+    content: `"""${chunk}""" Using the above text, answer the following question: "${question}" -- if the question cannot be answered using the text, summarize the text.`,
+  };
+}
+
+function* splitText (sentences: string[], maxLength: number = Config.browseChunkMaxLength, model = Config.fastLLMModel, question: string = ''): Generator<string> {
+  let currentChunk: string[] = [];
+
+  for (const sentence in sentences) {
+    const messageWithAdditionalSentence = [
+      createMessage(`${currentChunk.join(' ')} ${sentence}`, question),
+    ];
+
+    let expectedTokenUsage = tokenUsageOfChunk(messageWithAdditionalSentence, model) + 1;
+
+    if (expectedTokenUsage <= maxLength) {
+      currentChunk.push(sentence);
+    }
+    else {
+      yield currentChunk.join(' ');
+      currentChunk = [ sentence ];
+      const messageThisSentenceOnly = [
+        createMessage(currentChunk.join(' '), question),
+      ];
+      expectedTokenUsage = tokenUsageOfChunk(messageThisSentenceOnly, model) + 1;
+
+      if (expectedTokenUsage > maxLength) {
+        throw new Error(`Sentence is too long in webpage: ${expectedTokenUsage} tokens`);
+      }
+    }
+  }
+
+  if (currentChunk) {
+    yield currentChunk.join(' ');
+  }
+}
+
+function tokenUsageOfChunk (messages: Message[], model: TiktokenModel) {
+  return countMessageTokens(messages, model);
+}
+
+export async function summarizeText (url: string, text: string, question: string, driver?: ThenableWebDriver) {
+  if (!text) {
+    return 'Error: no text to summarize';
+  }
+
+  const model = Config.fastLLMModel;
+  const textLength = text.length;
+  console.log(`Text length: ${textLength} chartacters.`);
+
+  const summaries: string[] = [];
+  const flattenedParagraphs = text.split('\n').join(' ');
+  const sentences = await Python.parseSentences(flattenedParagraphs);
+  Logger.log('sentences', sentences);
+  const chunks = splitText(sentences, Config.browseChunkMaxLength, model, question);
+
+  const chunksArray = Array.from(chunks);
+
+  const scrollRatio = 1 / chunksArray.length;
+
+  let i: number = 0;
+  for (const chunk of chunksArray) {
+    if (driver) {
+      await scrollToPercentage(driver, scrollRatio * i);
+    }
+    console.log(`Adding chunk ${i+1} / ${chunksArray.length} to memory`);
+    let memoryToAdd = `Source: ${url}\n Raw content part#${i+1}: ${chunk}`;
+    const memory = getMemory();
+    await memory.add(memoryToAdd);
+
+    const messages = [ createMessage(chunk, question) ];
+    const tokens = tokenUsageOfChunk(messages, model);
+    console.log(`Summarizing chunk ${i+1} / ${chunksArray.length} of length ${chunk.length} characters, or ${tokens} tokens`);
+
+    const summary = await createChatCompletion(messages, model);
+    summaries.push(summary);
+    console.log(`Adding chunk ${i+1} summary to memory, of length ${summary.length} characters`);
+    memoryToAdd = `Source: ${url}\n Content summary part#${i+1}: ${summary}`;
+    await memory.add(memoryToAdd);
+    i += 1;
+  }
+
+  console.log(`Summarized ${chunksArray.length} chunks`);
+
+  const combinedSummary = summaries.join('\n');
+  const messages = [ createMessage(combinedSummary, question) ];
+
+  return await createChatCompletion(messages, model);
+}
