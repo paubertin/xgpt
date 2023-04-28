@@ -81,6 +81,21 @@ export async function createChatCompletion (
   return response.choices[0].message.content;
 }
 
+export async function createEmbedding (text: string, model: string) {
+  return await OpenAI.instance.createEmbedding({
+    input: [ text ],
+    model,
+  })
+}
+
+export async function getAdaEmbedding (text: string) {
+  const model = 'text-embedding-ada-002';
+  text = text.replaceAll('\n', ' ');
+  const embedding = await createEmbedding(text, model);
+  
+  return embedding.data.data[0].embedding;
+}
+
 export async function createEmbeddingWithAda (text: string) {
   const numRetries = 10;
   let embedding: number[] | undefined = undefined;

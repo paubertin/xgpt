@@ -35,6 +35,9 @@ export class LocalCache extends Memory {
   private _data: CacheContent;
 
   public constructor () {
+    if (Memory.instance) {
+      throw new Error('Memory already instanciated');
+    }
     super();
     this._fileName = `${Config.memoryIndex}.json`;
     if (fs.existsSync(this._fileName)) {
@@ -63,7 +66,10 @@ export class LocalCache extends Memory {
     }
   }
 
-  public override async add(text: string) {
+  protected override async _init(): Promise<void> {}
+  protected override async _shutdown(): Promise<void> {}
+
+  protected override async _add(text: string) {
     if (text.includes('Command Error:')) {
       return;
     }
@@ -86,15 +92,15 @@ export class LocalCache extends Memory {
     return text;
   }
 
-  public override async get(text: string) {
-    return this.getRelevant(text, 1);
+  protected override async _get(text: string) {
+    return this._getRelevant(text, 1);
   }
 
-  public override clear(): void {
+  protected override async _clear() {
     this._data = new CacheContent();
   }
 
-  public override async getRelevant(text: string, numRelevant: number): Promise<string[]> {
+  protected override async _getRelevant(text: string, numRelevant: number): Promise<string[]> {
     try {
 
       const embedding = await createEmbeddingWithAda(text);
@@ -110,7 +116,7 @@ export class LocalCache extends Memory {
     }
   }
 
-  public override getStats() {
+  protected override async _getStats() {
     return {
       length: this._data.texts.length,
       shape: this._data.embeddings.shape,

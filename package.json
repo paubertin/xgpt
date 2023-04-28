@@ -19,10 +19,13 @@
   "dependencies": {
     "@d4c/numjs": "^0.17.34",
     "@dqbd/tiktoken": "^1.0.6",
+    "@types/tar": "^6.1.4",
+    "@types/uuid": "^9.0.1",
     "ajv": "^8.12.0",
     "argparse": "^2.0.1",
     "dotenv": "^16.0.3",
     "googleapis": "^118.0.0",
+    "graphql": "^16.6.0",
     "joi": "^17.9.1",
     "jssoup": "^0.0.15",
     "lodash": "^4.17.21",
@@ -31,6 +34,9 @@
     "spacy": "^0.0.4",
     "spacy-nlp": "^1.0.11",
     "spacy-nlp-node": "^1.2.3",
-    "tiktoken-node": "^0.0.6"
+    "tar": "^6.1.13",
+    "tiktoken-node": "^0.0.6",
+    "uuid": "^9.0.0",
+    "weaviate-ts-client": "^1.1.0"
   }
 }

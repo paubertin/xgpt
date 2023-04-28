@@ -5,16 +5,16 @@ import { Message, Model, Role } from "./openai";
 import { countMessageTokens } from "./token-counter";
 import { sleepAsync } from "./sleep";
 
-export async function chatWithAI (prompt: string, userInput: string, fullMessageHistory: Message[], permanentMemory: Memory, tokenLimit: number) {
+export async function chatWithAI (prompt: string, userInput: string, fullMessageHistory: Message[], tokenLimit: number) {
   let loop = true;
   while (loop) {
     try {
       const model = Config.fastLLMModel;
       const sendTokenLimit = tokenLimit - 1000;
 
-      let relevantMemory = fullMessageHistory.length === 0 ? [] : await permanentMemory.getRelevant('[' + fullMessageHistory.map((v) => '\'' + v + '\'').join(',') + ']', 10);
+      let relevantMemory = fullMessageHistory.length === 0 ? [] : await Memory.getRelevant('[' + fullMessageHistory.map((v) => '\'' + v + '\'').join(',') + ']', 10);
 
-      console.log('Memory stats', permanentMemory.getStats());
+      console.log('Memory stats', await Memory.getStats());
 
       let context = await generateContext(prompt, relevantMemory, fullMessageHistory, model);
 
@@ -63,7 +63,7 @@ export async function chatWithAI (prompt: string, userInput: string, fullMessage
 
       const tokensRemaining = tokenLimit - context.currentTokensUsed;
 
-      const debug = true;
+      const debug = false;
       if (debug) {
         console.debug('Token limit:', tokenLimit);
         console.debug('Send Token Count:', context.currentTokensUsed);

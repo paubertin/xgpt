@@ -47,7 +47,6 @@ const schema = (new ajv()).compile({
 
 interface AgentOptions {
   aiName: string;
-  memory: Memory;
   fullMessageHistory: Message[];
   nextActionCount: number;
   commandRegistry: CommandRegistry;
@@ -60,7 +59,6 @@ interface AgentOptions {
 export class Agent {
 
   public aiName: string;
-  public memory: Memory;
   public fullMessageHistory: Message[];
   public nextActionCount: number;
   public commandRegistry: CommandRegistry;
@@ -71,7 +69,6 @@ export class Agent {
 
   public constructor (opts: AgentOptions) {
     this.aiName = opts.aiName;
-    this.memory = opts.memory;
     this.fullMessageHistory = opts.fullMessageHistory;
     this.nextActionCount = opts.nextActionCount;
     this.commandRegistry = opts.commandRegistry;
@@ -109,7 +106,7 @@ export class Agent {
         break;
       }
 
-      const assistantReply = await chatWithAI(this.systemPrompt, this.triggeringPrompt, this.fullMessageHistory, this.memory, Config.fastTokenLimit);
+      const assistantReply = await chatWithAI(this.systemPrompt, this.triggeringPrompt, this.fullMessageHistory, Config.fastTokenLimit);
       // console.log('assistantReply', assistantReply);
       if (!assistantReply) {
         console.log('no reply...');
@@ -211,7 +208,7 @@ export class Agent {
       }
 
       if (commandName !== 'doNothing') {
-        this.memory.add(`Assistant reply: ${assistantReply}\nResult: ${result}\nHuman feedback: ${userInput}`);
+        Memory.add(`Assistant reply: ${assistantReply}\nResult: ${result}\nHuman feedback: ${userInput}`);
 
         if (result) {
           this.fullMessageHistory.push(createChatMessage('system', result));

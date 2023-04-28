@@ -42,46 +42,51 @@ export class Config {
     return instance[key];
   }
 
-  public static get debugMode () { const instance = this.instance; return instance.debugMode; }
-  public static get continuousMode () { const instance = this.instance; return instance.continuousMode; }
-  public static get continuousLimit () { const instance = this.instance; return instance.continuousLimit; }
-  public static get speakMode () { const instance = this.instance; return instance.speakMode; }
-  public static get skipReprompt () { const instance = this.instance; return instance.skipReprompt; }
-  public static get allowDownloads () { const instance = this.instance; return instance.allowDownloads; }
-  public static get aiSettingsFile () { const instance = this.instance; return instance.aiSettingsFile; }
-  public static get fastLLMModel () { const instance = this.instance; return instance.fastLLMModel; }
-  public static get smartLLMModel () { const instance = this.instance; return instance.smartLLMModel; }
-  public static get fastTokenLimit () { const instance = this.instance; return instance.fastTokenLimit; }
-  public static get smartTokenLimit () { const instance = this.instance; return instance.smartTokenLimit; }
-  public static get browseChunkMaxLength () { const instance = this.instance; return instance.browseChunkMaxLength; }
-  public static get browseSpacyLanguageModel () { const instance = this.instance; return instance.browseSpacyLanguageModel; }
-  public static get openAIAPIKey () { const instance = this.instance; return instance.openAIAPIKey; }
-  public static get temperature () { const instance = this.instance; return instance.temperature; }
-  public static get executeLocalCommands () { const instance = this.instance; return instance.executeLocalCommands; }
-  public static get memoryBackend () { const instance = this.instance; return instance.memoryBackend; }
-  public static get memoryIndex () { const instance = this.instance; return instance.memoryIndex; }
-  public static get plugins () { const instance = this.instance; return instance.plugins; }
-  public static get googleApiKey () { const instance = this.instance; return instance.googleApiKey; }
-  public static get customSearchEngineId () { const instance = this.instance; return instance.customSearchEngineId; }
-  public static get restrictToWorkspace () { const instance = this.instance; return instance.restrictToWorkspace; }
+  public static get debugMode () { return this.instance.debugMode; }
+  public static get continuousMode () { return this.instance.continuousMode; }
+  public static get continuousLimit () { return this.instance.continuousLimit; }
+  public static get speakMode () { return this.instance.speakMode; }
+  public static get skipReprompt () { return this.instance.skipReprompt; }
+  public static get allowDownloads () { return this.instance.allowDownloads; }
+  public static get aiSettingsFile () { return this.instance.aiSettingsFile; }
+  public static get fastLLMModel () { return this.instance.fastLLMModel; }
+  public static get smartLLMModel () { return this.instance.smartLLMModel; }
+  public static get fastTokenLimit () { return this.instance.fastTokenLimit; }
+  public static get smartTokenLimit () { return this.instance.smartTokenLimit; }
+  public static get browseChunkMaxLength () { return this.instance.browseChunkMaxLength; }
+  public static get browseSpacyLanguageModel () { return this.instance.browseSpacyLanguageModel; }
+  public static get openAIAPIKey () { return this.instance.openAIAPIKey; }
+  public static get temperature () { return this.instance.temperature; }
+  public static get executeLocalCommands () { return this.instance.executeLocalCommands; }
+  public static get memoryBackend () { return this.instance.memoryBackend; }
+  public static get memoryIndex () { return this.instance.memoryIndex; }
+  public static get plugins () { return this.instance.plugins; }
+  public static get googleApiKey () { return this.instance.googleApiKey; }
+  public static get customSearchEngineId () { return this.instance.customSearchEngineId; }
+  public static get restrictToWorkspace () { return this.instance.restrictToWorkspace; }
+  public static get useWeaviateEmbedded () { return this.instance.useWeaviateEmbedded; }
+  public static get weaviateHost () { return this.instance.weaviateHost; }
+  public static get weaviatePort () { return this.instance.weaviatePort; }
+  public static get weaviateProtocol () { return this.instance.weaviateProtocol; }
+  public static get weaviateUserName () { return this.instance.weaviateUserName; }
+  public static get weaviatePassword () { return this.instance.weaviatePassword; }
+  public static get weaviateAPIKey () { return this.instance.weaviateAPIKey; }
   
   public static get workspacePath () {
-    const instance = this.instance;
-    const res = instance.workspacePath;
+    const res = this.instance.workspacePath;
     if (!res) { throw new Error('workspacePath has ot been set') }
     return res;
   }
 
-  public static set workspacePath (p: string) { const instance = this.instance; instance.workspacePath = p; }
+  public static set workspacePath (p: string) { this.instance.workspacePath = p; }
 
   public static get fileLoggerPath () {
-    const instance = this.instance;
-    const res = instance.fileLoggerPath;
+    const res = this.instance.fileLoggerPath;
     if (!res) { throw new Error('fileLoggerPath has ot been set') }
     return res;
   }
 
-  public static set fileLoggerPath (p: string) { const instance = this.instance; instance.fileLoggerPath = p; }
+  public static set fileLoggerPath (p: string) { this.instance.fileLoggerPath = p; }
 
   private constructor () {
     this.debugMode = false;
@@ -105,6 +110,13 @@ export class Config {
 
     this.memoryBackend = this.getEnv('MEMORY_BACKEND', 'local');
     this.memoryIndex = this.getEnv('MEMORY_INDEX', 'x-gpt');
+    this.useWeaviateEmbedded = this.getEnv('USE_WEAVIATE_EMBEDDED', false);
+    this.weaviateHost = this.getEnv('WEAVIATE_HOST', 'localhost');
+    this.weaviatePort = this.getEnv('WEAVIATE_PORT', 6666);
+    this.weaviateProtocol = this.getEnv('WEAVIATE_PROTOCOL', 'http');
+    this.weaviateUserName = this.getEnv('WEAVIATE_USERNAME');
+    this.weaviatePassword = this.getEnv('WEAVIATE_PASSWORD');
+    this.weaviateAPIKey = this.getEnv('WEAVIATE_API_KEY');
     
     this.googleApiKey = this.getEnv('GOOGLE_API_KEY');
     this.customSearchEngineId = this.getEnv('CUSTOM_SEARCH_ENGINE_ID');
@@ -118,7 +130,7 @@ export class Config {
     if (def !== undefined) {
       if (typeof def === 'boolean') {
         if (envValue !== undefined) {
-          return envValue === 'true' ? true : false;
+          return envValue !== 'true' ? false : true;
         }
         else {
           return def;
@@ -160,8 +172,18 @@ export class Config {
   private openAIAPIKey?: string;
   private temperature: number;
   private executeLocalCommands: boolean;
+
   private memoryBackend: string;
   private memoryIndex: string;
+  private useWeaviateEmbedded: boolean;
+  private weaviateHost: string;
+  private weaviatePort?: number;
+  private weaviateProtocol: string;
+  private weaviateUserName?: string;
+  private weaviatePassword?: string;
+  private weaviateAPIKey?: string;
+
+
   private googleApiKey?: string;
   private customSearchEngineId?: string;
   private plugins: XGPTPlugin[] = [];

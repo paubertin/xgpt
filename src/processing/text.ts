@@ -8,6 +8,7 @@ import { TiktokenModel } from '@dqbd/tiktoken';
 import { getMemory } from '../memory';
 import { createChatCompletion } from '../llm.utils';
 import { Logger } from '../log/logger';
+import { Memory } from '../memory/base';
 
 async function scrollToPercentage (driver: ThenableWebDriver, ratio: number) {
   try {
@@ -140,8 +141,7 @@ export async function summarizeText (url: string, text: string, question: string
     }
     console.log(`Adding chunk ${i+1} / ${chunks.length} to memory`);
     let memoryToAdd = `Source: ${url}\n Raw content part#${i+1}: ${chunk}`;
-    const memory = getMemory();
-    await memory.add(memoryToAdd);
+    await Memory.add(memoryToAdd);
 
     const messages = [ createMessage(chunk, question) ];
     const tokens = await tokenUsageOfChunk(messages, model);
@@ -152,7 +152,7 @@ export async function summarizeText (url: string, text: string, question: string
     summaries.push(summary);
     console.log(`Adding chunk ${i+1} summary to memory, of length ${summary.length} characters`);
     memoryToAdd = `Source: ${url}\n Content summary part#${i+1}: ${summary}`;
-    await memory.add(memoryToAdd);
+    await Memory.add(memoryToAdd);
     i += 1;
   }
 
