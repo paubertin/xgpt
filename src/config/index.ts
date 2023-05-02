@@ -1,22 +1,114 @@
 import * as dotenv from 'dotenv';
-import { Logger } from '../logger';
+import { Color, Logger } from '../logger';
 import { XGPTPlugin } from '../plugins/plugin.template';
 import { Model } from '../openai';
+import { SUPPORTED_MEMORIES } from '../memory';
+import fs from 'fs';
+
+export interface ConfigOptions {
+  continuous?: boolean;
+  skip_reprompt?: boolean;
+  ai_settings?: string;
+  continuous_limit?: number;
+  speak?: boolean;
+  debug?: boolean;
+  gpt3only?: boolean;
+  gpt4only?: boolean;
+  use_memory?: string;
+  // browser_name?: string;
+  allow_downloads?: boolean;
+}
 
 export class Config {
 
-  public static init () {
+  public static init (options?: ConfigOptions) {
     if (this._initialized) {
       return;
     }
     dotenv.config();
     this._instance = new Config();
-    this._instance._init();
+    this._instance._init(options);
     this._initialized = true;
     return this._instance;
   }
 
-  private _init () {
+  private _init (options?: ConfigOptions) {
+    if (options?.debug) {
+      Logger.type('Debug mode: ', Color.green, 'ENABLED');
+      this.debugMode = true;
+    }
+
+    if (options?.continuous) {
+      Logger.type('Continuous mode: ', Color.red, 'ENABLED');
+      Logger.type('Warning: ', Color.red, 'Continuous mode is not recommended. It is potentially dangerous and may'
+      + ' cause your AI to run forever or carry out actions you would not usually'
+      + ' authorise. Use at your own risk.');
+      this.continuousMode = true;
+
+      if (options.continuous_limit) {
+        Logger.type('Continuous limit: ', Color.green, options.continuous_limit);
+        this.continuousLimit = options.continuous_limit;
+      }
+    }
+
+    if (options?.continuous_limit !== undefined && !options.continuous) {
+      throw new Error('--continuous_limit can only be used with --continuous');
+    }
+
+    if (options?.speak) {
+      Logger.type('Speak mode: ', Color.green, 'ENABLED');
+      this.speakMode = true;
+    }
+
+    if (options?.gpt3only) {
+      Logger.type('GPT3.5 only mode: ', Color.green, 'ENABLED');
+      this.smartLLMModel = this.fastLLMModel;
+    }
+
+    if (options?.gpt4only) {
+      Logger.type('GPT4 only mode: ', Color.green, 'ENABLED');
+      this.fastLLMModel = this.smartLLMModel;
+    }
+
+    if (options?.use_memory) {
+      if (!SUPPORTED_MEMORIES.includes(options.use_memory)) {
+        Logger.type('ONLY THE FOLLOWING MEMORIES BACKENDS ARE SUPPORTED: ', Color.red, SUPPORTED_MEMORIES);
+        Logger.type('Defaulting to: ', Color.yellow, this.memoryBackend);
+      }
+      else {
+        this.memoryBackend = options.use_memory;
+      }
+    }
+
+    if (options?.skip_reprompt) {
+      Logger.type('Skip re-prompt: ', Color.green, 'ENABLED');
+      this.skipReprompt = true;
+    }
+
+    if (options?.ai_settings) {
+      try {
+        let fileContent = fs.readFileSync(options?.ai_settings, { encoding: 'utf-8' }).toString().trim();
+        try {
+          JSON.parse(fileContent);
+        }
+        catch (err: any) {
+          throw new Error('Failed to parse file content');
+        }
+      }
+      catch (err: any) {
+        Logger.type('FAILED FILE VALIDATION', Color.red, err.message);
+        throw err;
+      }
+      this.aiSettingsFile = options.ai_settings;
+      this.skipReprompt = true;
+    }
+
+    if (options?.allow_downloads) {
+      Logger.type('Native downloading: ', Color.green, 'ENABLED');
+      Logger.type('WARNING: ', Color.yellow, 'Auto-GPT will now be able to download and save files to your machine. It is recommended that you monitor any files it downloads carefully.');
+      Logger.type('WARNING: ', Color.yellow, 'ALWAYS REMEMBER TO NEVER OPEN FILES YOU AREN\'T SURE OF!');
+      this.allowDownloads = true;
+    }
   }
 
   public static get instance () {
@@ -31,8 +123,8 @@ export class Config {
    */
   public static checkOpenAIAPIKey () {
     if (!this._instance?.openAIAPIKey) {
-      Logger.error('Please set your OpenAI API key in .env or as environment variable.');
-      Logger.error('You can get your key from https://platform.openai.com/account/api-keys');
+      // Logger.error('Please set your OpenAI API key in .env or as environment variable.');
+      // Logger.error('You can get your key from https://platform.openai.com/account/api-keys');
       throw new Error('OpenAPI key not found');
     }
   }
@@ -42,7 +134,6 @@ export class Config {
     return instance[key];
   }
 
-  public static get logsDirectory () { return this.instance.logsDirectory; }
   public static get debugMode () { return this.instance.debugMode; }
   public static get continuousMode () { return this.instance.continuousMode; }
   public static get continuousLimit () { return this.instance.continuousLimit; }
@@ -72,6 +163,13 @@ export class Config {
   public static get weaviateUserName () { return this.instance.weaviateUserName; }
   public static get weaviatePassword () { return this.instance.weaviatePassword; }
   public static get weaviateAPIKey () { return this.instance.weaviateAPIKey; }
+
+  
+  public static get authorizeKey () { return this.instance.authorizeKey; }
+  public static get exitKey () { return this.instance.exitKey; }
+  public static get embeddingModel () { return this.instance.embeddingModel; }
+  public static get embeddingTokenizer () { return this.instance.embeddingTokenizer; }
+  public static get embeddingTokenLimit () { return this.instance.embeddingTokenLimit; }
   
   public static get workspacePath () {
     const res = this.instance.workspacePath;
@@ -92,37 +190,44 @@ export class Config {
   private constructor () {
     this.debugMode = false;
     this.continuousMode = false;
-    this.continuousLimit = 0;
     this.speakMode = false;
     this.skipReprompt = false;
     this.allowDownloads = false;
 
-    this.logsDirectory = this.getEnv('LOGS_DIRECTORY');
+    this.continuousLimit = 0;
+
+    this.authorizeKey = this.getEnv('AUTHORISE_COMMAND_KEY', 'y');
+    this.exitKey = this.getEnv('EXIT_KEY', 'n');
     this.aiSettingsFile = this.getEnv('AI_SETTINGS_FILE', 'ai_settings.json');
     this.fastLLMModel = this.getEnv('FAST_LLM_MODEL', 'gpt-3.5-turbo');
     this.smartLLMModel = this.getEnv('SMART_LLM_MODEL', 'gpt-4');
     this.fastTokenLimit = this.getEnv('FAST_TOKEN_LIMIT', 4000);
     this.smartTokenLimit = this.getEnv('SMART_TOKEN_LIMIT', 8000);
+    this.embeddingModel = this.getEnv('EMBEDDING_MODEL', 'text-embedding-ada-002');
+    this.embeddingTokenizer = this.getEnv('EMBEDDING_TOKENIZER', 'cl100k_base');
+    this.embeddingTokenLimit = this.getEnv('EMBEDDING_TOKEN_LIMIT', 8191);
     this.browseChunkMaxLength = this.getEnv('BROWSE_CHUNK_MAX_LENGTH', 3000);
     this.browseSpacyLanguageModel = this.getEnv('BROWSE_SPACY_LANGUAGE_MODEL', 'en_core_web_sm');
 
     this.openAIAPIKey = this.getEnv('OPENAI_API_KEY');
-    this.temperature = this.getEnv('TEMPERATURE', 1);
+    this.temperature = this.getEnv('TEMPERATURE', 0);
     this.executeLocalCommands = this.getEnv('EXECUTE_LOCAL_COMMANDS', false);
+    this.restrictToWorkspace = this.getEnv('RESTRICT_TO_WORKSPACE', true);
 
-    this.memoryBackend = this.getEnv('MEMORY_BACKEND', 'local');
-    this.memoryIndex = this.getEnv('MEMORY_INDEX', 'x-gpt');
-    this.useWeaviateEmbedded = this.getEnv('USE_WEAVIATE_EMBEDDED', false);
+    this.googleApiKey = this.getEnv('GOOGLE_API_KEY');
+    this.customSearchEngineId = this.getEnv('CUSTOM_SEARCH_ENGINE_ID');
+
     this.weaviateHost = this.getEnv('WEAVIATE_HOST', 'localhost');
     this.weaviatePort = this.getEnv('WEAVIATE_PORT', 6666);
     this.weaviateProtocol = this.getEnv('WEAVIATE_PROTOCOL', 'http');
     this.weaviateUserName = this.getEnv('WEAVIATE_USERNAME');
     this.weaviatePassword = this.getEnv('WEAVIATE_PASSWORD');
     this.weaviateAPIKey = this.getEnv('WEAVIATE_API_KEY');
+    this.useWeaviateEmbedded = this.getEnv('USE_WEAVIATE_EMBEDDED', false);
+
+    this.memoryBackend = this.getEnv('MEMORY_BACKEND', 'local');
+    this.memoryIndex = this.getEnv('MEMORY_INDEX', 'auto-gpt');
     
-    this.googleApiKey = this.getEnv('GOOGLE_API_KEY');
-    this.customSearchEngineId = this.getEnv('CUSTOM_SEARCH_ENGINE_ID');
-    this.restrictToWorkspace = this.getEnv('RESTRICT_TO_WORKSPACE', true);
   }
   
   private getEnv<T> (key: string): T | undefined
@@ -158,7 +263,6 @@ export class Config {
   private static _instance: Config | undefined = undefined;
   private static _initialized: boolean = false;
 
-  private logsDirectory?: string;
   private debugMode: boolean;
   private continuousMode: boolean;
   private continuousLimit: number;
@@ -194,4 +298,10 @@ export class Config {
 
   private workspacePath?: string;
   private fileLoggerPath?: string;
+
+  private authorizeKey: string;
+  private exitKey: string;
+  private embeddingModel: string;
+  private embeddingTokenizer: string;
+  private embeddingTokenLimit: number;
 }

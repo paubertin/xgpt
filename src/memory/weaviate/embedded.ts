@@ -8,6 +8,7 @@ import { homedir } from 'os';
 import { join } from 'path';
 import { extract } from 'tar';
 import { createHash } from 'crypto';
+import { Color, Logger } from '../../logger';
 
 const defaultBinaryPath = join(homedir(), '.cache/weaviate-embedded');
 const defaultPersistenceDataPath = join(homedir(), '.local/share/weaviate');
@@ -146,8 +147,18 @@ export class EmbeddedDB {
       console.log(`embedded db failed to start: ${JSON.stringify(err)}`);
     });
 
-    childProc.stdout.pipe(process.stdout);
-    childProc.stderr.pipe(process.stderr);
+    /*
+    childProc.stdout.on('data', (data) => {
+      Logger.debug('WEAVIATE', Color.yellow, data);
+    });
+
+    childProc.stderr.on('data', (data) => {
+      Logger.error('WEAVIATE', data);
+    });
+    */
+
+    // childProc.stdout.pipe(process.stdout);
+    // childProc.stderr.pipe(process.stderr);
 
     this.pid = childProc.pid as number;
     console.log(

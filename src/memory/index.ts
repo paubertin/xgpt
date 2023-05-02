@@ -3,6 +3,12 @@ import { Memory } from "./base";
 import { LocalCache } from "./local";
 import { WeaviateMemory } from "./weaviate";
 
+export const SUPPORTED_MEMORIES = [
+  'local',
+  'no_memory',
+  'weaviate',
+];
+
 export async function getMemory (init: boolean = false) {
   let memory: Memory;
   try {

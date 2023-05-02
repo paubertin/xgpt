@@ -28,7 +28,7 @@ export class WeaviateMemory extends Memory {
     }
     else {
       this._client = weaviate.client({
-        host: `${Config.weaviateHost}:${Config.weaviateProtocol}`,
+        host: `${Config.weaviateHost}:${Config.weaviatePort}`,
         scheme: Config.weaviateProtocol,
         authClientSecret: this._buildAuthCredentials(),
         apiKey: this._buildApiKey(),

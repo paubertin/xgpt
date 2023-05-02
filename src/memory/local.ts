@@ -35,9 +35,6 @@ export class LocalCache extends Memory {
   private _data: CacheContent;
 
   public constructor () {
-    if (Memory.instance) {
-      throw new Error('Memory already instanciated');
-    }
     super();
     this._fileName = `${Config.memoryIndex}.json`;
     if (fs.existsSync(this._fileName)) {

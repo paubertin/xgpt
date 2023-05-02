@@ -10,7 +10,7 @@ import ajv from 'ajv';
 import Joi from 'joi';
 import readline from 'readline/promises';
 import { Workspace } from "../workspace";
-import { Colour } from "../logger";
+import { Color } from "../logger";
 import { callAIFunction } from "../llm.utils";
 import { JSON_SCHEMA } from "../prompts/generator";
 

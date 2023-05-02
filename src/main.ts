@@ -1,7 +1,6 @@
-import { Config } from './config';
-import { Colour, Logger } from './logger';
+import { Config, ConfigOptions } from './config';
+import { Color, Logger } from './logger';
 import argparse from 'argparse';
-import { getMemory } from './memory';
 import { constructMainAIConfig } from './prompts';
 import { Agent } from './agent/agent';
 import { OpenAI } from './openai';
@@ -18,10 +17,23 @@ import { deleteAgent, listAgents, messageAgent, startAgent } from './commands/ag
 import { AgentManager } from './agent/agent.manager';
 import { Memory } from './memory/base';
 import readline from 'readline/promises';
+import { sayText } from './speech';
+import { getMemory } from './memory';
+
 
 const parser = new argparse.ArgumentParser({});
 
-parser.add_argument('-c', '--continuous', { action: 'store_true', help: 'enable continous mode',  });
+parser.add_argument('-c', '--continuous', { action: 'store_true', help: 'Enable continous mode' });
+parser.add_argument('-y', '--skip-reprompt', { action: 'store_true', help: 'Skips the re-prompting messages at the beginning of the script' });
+parser.add_argument('-C', '--ai-settings', { metavar: 'path_to_ai_settings.json', help: 'Specifies which ai_settings.json file to use, will also automatically skip the re-prompt' });
+parser.add_argument('-l', '--continuous-limit', { type: 'int', help: 'Defines the number of times to run in continuous mode' });
+parser.add_argument('--speak', { action: 'store_true', help: 'Enable speak mode' });
+parser.add_argument('--debug', { action: 'store_true', help: 'Enable debug mode' });
+parser.add_argument('--gpt3only', { action: 'store_true', help: 'Enable GPT3.5 only mode' });
+parser.add_argument('--gpt4only', { action: 'store_true', help: 'Enable GPT4 only mode' });
+parser.add_argument('-m', '--use-memory', { metavar: 'memory_type', type: 'str', help: 'Defines which memory backend to use' });
+// parser.add_argument('-b', '--browser-name', { type: 'string', help: 'Specifies which web-browser to use when using selenium to scrape the web' });
+parser.add_argument('--allow-downloads', { action: 'store_true', help: 'Dangerous: Allows Auto-GPT to download files natively' });
 
 export async function main () {
 
@@ -29,22 +41,21 @@ export async function main () {
     const workspaceDirectory: string = 'xgpt-workspace';
 
     
-    const args = parser.parse_args();
+    const parsedArgs: ConfigOptions = parser.parse_args();
     
-    Config.init();
     await Logger.init();
+    Config.init(parsedArgs);
+    await getMemory(true);
 
-    Logger.debug('Logger initialized...', 'TITRE', Colour.red);
-    Logger.warn('this is a warning...', 'TITRE', Colour.yellow);
-    Logger.error('this is an error', 'NON');
-    Logger.type('This is a sentence', 'TITRE', Colour.yellow);
+    // Logger.debug('Logger initialized...', 'TITRE', Color.red);
+    // Logger.warn('this is a warning...', 'TITRE', Color.yellow);
+    // Logger.error('this is an error', 'NON');
+    // Logger.type('This is a sentence', 'TITRE', Color.yellow);
 
     AgentManager.init();
     Config.checkOpenAIAPIKey();
     OpenAI.init();
     await Python.init();
-
-    await getMemory(true);
 
     const registry = new CommandRegistry();
 
@@ -148,7 +159,7 @@ export async function main () {
     aiConfig.commandRegistry = registry;
 
     const systemPrompt = aiConfig.constructFullPrompt();
-    Logger.debug('Prompt', systemPrompt);
+    // Logger.debug('Prompt', systemPrompt);
 
     const triggeringPrompt = 'Determine which next command to use, and respond using the format specified above:';
 

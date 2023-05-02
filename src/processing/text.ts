@@ -1,11 +1,9 @@
-import { Builder, By, Key, ThenableWebDriver, until } from 'selenium-webdriver';
+import { ThenableWebDriver } from 'selenium-webdriver';
 import { Message } from '../openai';
 import { Config } from '../config';
-import spacy from 'spacy-nlp';
 import { Python } from '../spacy';
 import { countMessageTokens } from '../token-counter';
 import { TiktokenModel } from '@dqbd/tiktoken';
-import { getMemory } from '../memory';
 import { createChatCompletion } from '../llm.utils';
 import { Logger } from '../log/logger';
 import { Memory } from '../memory/base';
