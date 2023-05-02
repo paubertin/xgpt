@@ -31,7 +31,7 @@ export class Config {
    */
   public static checkOpenAIAPIKey () {
     if (!this._instance?.openAIAPIKey) {
-      Logger.error('Please set your OpenAI API key in .env or as environment variable.', 12, 'cuou');
+      Logger.error('Please set your OpenAI API key in .env or as environment variable.');
       Logger.error('You can get your key from https://platform.openai.com/account/api-keys');
       process.exit(1);
     }
@@ -42,6 +42,7 @@ export class Config {
     return instance[key];
   }
 
+  public static get logsDirectory () { return this.instance.logsDirectory; }
   public static get debugMode () { return this.instance.debugMode; }
   public static get continuousMode () { return this.instance.continuousMode; }
   public static get continuousLimit () { return this.instance.continuousLimit; }
@@ -96,6 +97,7 @@ export class Config {
     this.skipReprompt = false;
     this.allowDownloads = false;
 
+    this.logsDirectory = this.getEnv('LOGS_DIRECTORY');
     this.aiSettingsFile = this.getEnv('AI_SETTINGS_FILE', 'ai_settings.json');
     this.fastLLMModel = this.getEnv('FAST_LLM_MODEL', 'gpt-3.5-turbo');
     this.smartLLMModel = this.getEnv('SMART_LLM_MODEL', 'gpt-4');
@@ -156,6 +158,7 @@ export class Config {
   private static _instance: Config | undefined = undefined;
   private static _initialized: boolean = false;
 
+  private logsDirectory?: string;
   private debugMode: boolean;
   private continuousMode: boolean;
   private continuousLimit: number;

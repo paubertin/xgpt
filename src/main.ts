@@ -1,5 +1,5 @@
 import { Config } from './config';
-import { Logger } from './log/logger';
+import { Colour, Logger } from './logger';
 import argparse from 'argparse';
 import { getMemory } from './memory';
 import { constructMainAIConfig } from './prompts';
@@ -28,9 +28,17 @@ export async function main () {
   try {
     const workspaceDirectory: string = 'xgpt-workspace';
 
+    
     const args = parser.parse_args();
-
+    
     Config.init();
+    await Logger.init();
+
+    Logger.debug('Logger initialized...', 'TITRE', Colour.red);
+    Logger.warn('this is a warning...', 'TITRE', Colour.yellow);
+    Logger.error('this is an error', 'NON');
+    Logger.type('This is a sentence', 'TITRE', Colour.yellow);
+
     AgentManager.init();
     Config.checkOpenAIAPIKey();
     OpenAI.init();
@@ -140,7 +148,7 @@ export async function main () {
     aiConfig.commandRegistry = registry;
 
     const systemPrompt = aiConfig.constructFullPrompt();
-    Logger.log('Prompt', systemPrompt);
+    Logger.debug('Prompt', systemPrompt);
 
     const triggeringPrompt = 'Determine which next command to use, and respond using the format specified above:';
 

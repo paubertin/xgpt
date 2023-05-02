@@ -46,7 +46,7 @@ export async function createChatCompletion (
   let warnedUser = false;
 
   if (Config.debugMode) {
-    Logger.status(`Creating chat completion with model ${model}, temperature ${temperature}, max tokens ${maxTokens}`);
+    Logger.debug(`Creating chat completion with model ${model}, temperature ${temperature}, max tokens ${maxTokens}`);
   }
 
   for (let attempt = 1; attempt <= numRetries; ++attempt) {

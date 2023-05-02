@@ -35,8 +35,10 @@
     "spacy-nlp": "^1.0.11",
     "spacy-nlp-node": "^1.2.3",
     "tar": "^6.1.13",
+    "terminal-kit": "^3.0.0",
     "tiktoken-node": "^0.0.6",
     "uuid": "^9.0.0",
-    "weaviate-ts-client": "^1.1.0"
+    "weaviate-ts-client": "^1.1.0",
+    "winston": "^3.8.2"
   }
 }

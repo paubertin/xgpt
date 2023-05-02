@@ -126,7 +126,7 @@ declare module "jssoup" {
 
 declare module 'spacy-nlp' {
   export default {
-    server: (async (opts: { port: number }) => void),
+    server:(opts: { port: number }) => Promise<void>,
     nlp: any,
   };
 }
