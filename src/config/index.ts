@@ -33,7 +33,7 @@ export class Config {
     if (!this._instance?.openAIAPIKey) {
       Logger.error('Please set your OpenAI API key in .env or as environment variable.');
       Logger.error('You can get your key from https://platform.openai.com/account/api-keys');
-      process.exit(1);
+      throw new Error('OpenAPI key not found');
     }
   }
 
