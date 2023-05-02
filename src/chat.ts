@@ -4,24 +4,29 @@ import { Memory } from "./memory/base";
 import { Message, Model, Role } from "./openai";
 import { countMessageTokens } from "./token-counter";
 import { sleepAsync } from "./sleep";
+import { Agent } from "./agent/agent";
+import { getNewlyTrimmedMessages, updateRunningMemory } from "./memory";
 
-export async function chatWithAI (prompt: string, userInput: string, fullMessageHistory: Message[], tokenLimit: number) {
+export async function chatWithAI (agent: Agent, prompt: string, userInput: string, fullMessageHistory: Message[], tokenLimit: number) {
   let loop = true;
   while (loop) {
     try {
       const model = Config.fastLLMModel;
       const sendTokenLimit = tokenLimit - 1000;
 
-      let relevantMemory = fullMessageHistory.length === 0 ? [] : await Memory.getRelevant('[' + fullMessageHistory.map((v) => '\'' + v + '\'').join(',') + ']', 10);
+      //let relevantMemory = fullMessageHistory.length === 0 ? [] : await Memory.getRelevant('[' + fullMessageHistory.map((v) => '\'' + v + '\'').join(',') + ']', 10);
+      let relevantMemory = [];
 
       console.log('Memory stats', await Memory.getStats());
 
       let context = await generateContext(prompt, relevantMemory, fullMessageHistory, model);
 
+      /*
       while (context.currentTokensUsed > 2500) {
         relevantMemory = relevantMemory.splice(-1);
         context = await generateContext(prompt, relevantMemory, fullMessageHistory, model);
       }
+      */
 
       context.currentTokensUsed += await countMessageTokens([createChatMessage('user', userInput)], model);
 
@@ -35,6 +40,14 @@ export async function chatWithAI (prompt: string, userInput: string, fullMessage
 
         context.currentTokensUsed += tokensToAdd;
         context.nextMessageToAddIndex -= 1;
+      }
+
+      if (fullMessageHistory.length) {
+        const { newMessagesNotInContext, newIndex } = getNewlyTrimmedMessages(fullMessageHistory, context.currentContext, agent.lastmemoryIndex);
+        agent.lastmemoryIndex = newIndex;
+
+        agent.summarymemory = await updateRunningMemory(agent.summarymemory, newMessagesNotInContext);
+        context.currentContext.splice(context.insertionIndex, 0, createChatMessage('system', `This reminds you of these events from your path: \n${agent.summarymemory}`));
       }
 
       context.currentContext.push(createChatMessage('user', userInput));
@@ -63,7 +76,7 @@ export async function chatWithAI (prompt: string, userInput: string, fullMessage
 
       const tokensRemaining = tokenLimit - context.currentTokensUsed;
 
-      const debug = false;
+      const debug = true;
       if (debug) {
         console.debug('Token limit:', tokenLimit);
         console.debug('Send Token Count:', context.currentTokensUsed);
@@ -114,11 +127,13 @@ async function generateContext (prompt: string, relevantMemory: string[], fullMe
     createChatMessage('system', `The current time and date is ${(new Date()).toLocaleString()}`),
   ];
 
+  /*
   if (relevantMemory.length) {
     currentContext.push(
       createChatMessage('system', `This reminds you of these events from your past:\n${relevantMemory}\n\n`),
     );
   }
+  */
 
   return {
     nextMessageToAddIndex: fullMessageHistory.length - 1,

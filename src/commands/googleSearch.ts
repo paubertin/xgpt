@@ -15,7 +15,6 @@ const cse = google.customsearch('v1').cse;
  */
 
 export async function googleSearch (query: string, numResults: number = 8) {
-  console.log('google');
   try {
     const googleApiKey = Config.googleApiKey;
     const customSearchEngineId = Config.customSearchEngineId;

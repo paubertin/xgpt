@@ -163,10 +163,10 @@ export async function browseWebsite (url: string, question: string) {
   Logger.log('summary', summaryText);
   Logger.log('links', links);
 
-  return {
-    response: `Answer gathered from website: ${summaryText} \n \n Links: ${links}`,
-    driver,
-  }
+  return `Answer gathered from website: ${summaryText}
+
+Links:
+${links.map((link) => `- ${link}`).join('\n')}`;
 }
 
 export async function scrapeTextWithSelenium (url: string) {

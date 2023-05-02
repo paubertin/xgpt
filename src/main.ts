@@ -16,8 +16,9 @@ import { browseWebsite } from './commands/web';
 import { Python } from './spacy';
 import { deleteAgent, listAgents, messageAgent, startAgent } from './commands/agents';
 import { AgentManager } from './agent/agent.manager';
-import { Memory } from './memory/base';
-import readline from 'readline/promises';
+
+import { wikipediaSearch } from './commands/wikipedia';
+import { analyseCode, generateCode, improveCode, writeTests } from './commands/code';
 
 const parser = new argparse.ArgumentParser({});
 
@@ -26,11 +27,13 @@ parser.add_argument('-c', '--continuous', { action: 'store_true', help: 'enable 
 export async function main () {
 
   try {
+    Config.init();
+
+    const res = await fetch('https://fr.wikipedia.org/w/api.php?action=query&format=json&list=search&utf8=1&formatversion=2&srsearch=%27england%27');
+    console.log('res', await res.json());
+    
     const workspaceDirectory: string = 'xgpt-workspace';
 
-    const args = parser.parse_args();
-
-    Config.init();
     AgentManager.init();
     Config.checkOpenAIAPIKey();
     OpenAI.init();
@@ -47,6 +50,48 @@ export async function main () {
         query: '<query>',
       },
       enabled: Config.googleApiKey !== undefined,
+    }));
+
+    registry.register(command(wikipediaSearch, {
+      name: 'wikipedia',
+      description: 'Wikipedia search',
+      args: {
+        query: '<query>',
+      },
+    }));
+
+    registry.register(command(generateCode, {
+      name: 'generateCode',
+      description: 'Typescript code generation',
+      args: {
+        description: '<description>',
+      },
+    }));
+
+    registry.register(command(improveCode, {
+      name: 'improveCode',
+      description: 'Improve existing code based on suggestions provided',
+      args: {
+        suggestions: '<suggestions>',
+        code: '<code>',
+      },
+    }));
+
+    registry.register(command(analyseCode, {
+      name: 'analyseCode',
+      description: 'Analyse given code and suggest improvements',
+      args: {
+        code: '<code>',
+      },
+    }));
+
+    registry.register(command(writeTests, {
+      name: 'writeTests',
+      description: 'Generates test cases for the given code, focusing on specific areas if given',
+      args: {
+        code: '<code>',
+        focus: '<focus>',
+      },
     }));
 
     registry.register(command(createDir, {

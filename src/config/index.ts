@@ -71,6 +71,8 @@ export class Config {
   public static get weaviateUserName () { return this.instance.weaviateUserName; }
   public static get weaviatePassword () { return this.instance.weaviatePassword; }
   public static get weaviateAPIKey () { return this.instance.weaviateAPIKey; }
+
+  public static get gpt4allDir () { return this.instance.gpt4allDir; }
   
   public static get workspacePath () {
     const res = this.instance.workspacePath;
@@ -121,6 +123,8 @@ export class Config {
     this.googleApiKey = this.getEnv('GOOGLE_API_KEY');
     this.customSearchEngineId = this.getEnv('CUSTOM_SEARCH_ENGINE_ID');
     this.restrictToWorkspace = this.getEnv('RESTRICT_TO_WORKSPACE', true);
+
+    this.gpt4allDir = this.getEnv('GPT4ALL_DIR');
   }
   
   private getEnv<T> (key: string): T | undefined
@@ -191,4 +195,6 @@ export class Config {
 
   private workspacePath?: string;
   private fileLoggerPath?: string;
+
+  private gpt4allDir?: string;
 }

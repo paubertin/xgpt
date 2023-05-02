@@ -52,6 +52,7 @@ export async function createChatCompletion (
   for (let attempt = 1; attempt <= numRetries; ++attempt) {
     const backoff = 2 ** (attempt + 2);
     try {
+      console.log('model sent to AI', messages);
       response = (await OpenAI.instance.createChatCompletion({
         model,
         messages,

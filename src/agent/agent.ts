@@ -66,6 +66,8 @@ export class Agent {
   public systemPrompt: string;
   public triggeringPrompt: string;
   public workspace: Workspace;
+  public summarymemory: string = 'I was created';
+  public lastmemoryIndex: number = 0;
 
   public constructor (opts: AgentOptions) {
     this.aiName = opts.aiName;
@@ -106,7 +108,7 @@ export class Agent {
         break;
       }
 
-      const assistantReply = await chatWithAI(this.systemPrompt, this.triggeringPrompt, this.fullMessageHistory, Config.fastTokenLimit);
+      const assistantReply = await chatWithAI(this, this.systemPrompt, this.triggeringPrompt, this.fullMessageHistory, Config.fastTokenLimit);
       // console.log('assistantReply', assistantReply);
       if (!assistantReply) {
         console.log('no reply...');
