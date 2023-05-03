@@ -1,8 +1,8 @@
-import { Config } from "../config";
-import { getAdaEmbedding } from "../llm.utils";
-import { Memory } from "./base";
+import { Config } from "../config/index.js";
+import { getAdaEmbedding } from "../llm.utils.js";
+import { Memory } from "./base.js";
 import weaviate, { WeaviateClient } from 'weaviate-ts-client';
-import weaviateEmbedded, { EmbeddedClient as WeaviateEmbeddedClient, EmbeddedOptions } from './weaviate/index';
+import weaviateEmbedded, { EmbeddedClient as WeaviateEmbeddedClient, EmbeddedOptions } from './weaviate/index.js';
 import { v4 as uuidv4 } from 'uuid';
 
 export class WeaviateMemory extends Memory {
@@ -27,7 +27,7 @@ export class WeaviateMemory extends Memory {
       );
     }
     else {
-      this._client = weaviate.client({
+      this._client = weaviate.default.client({
         host: `${Config.weaviateHost}:${Config.weaviatePort}`,
         scheme: Config.weaviateProtocol,
         authClientSecret: this._buildAuthCredentials(),

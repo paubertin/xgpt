@@ -1,6 +1,6 @@
 import * as openai from 'openai';
 import tiktoken from '@dqbd/tiktoken';
-import { Config } from './config';
+import { Config } from './config/index.js';
 
 export type Model = tiktoken.TiktokenModel;
 export type Message = openai.ChatCompletionRequestMessage;

@@ -1,4 +1,4 @@
-import { Command } from "./command";
+import { Command } from "./command.js";
 
 export class CommandRegistry {
   public commands: Map<string, Command> = new Map();

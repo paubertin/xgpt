@@ -1,13 +1,13 @@
-import { Config } from "../config";
-import { createEmbeddingWithAda } from "../llm.utils";
-import { Memory } from "./base";
+import { Config } from "../config/index.js";
+import { createEmbeddingWithAda } from "../llm.utils.js";
+import { Memory } from "./base.js";
 import nj from '@d4c/numjs';
 import fs from 'fs';
 
 const EMBED_DIM = 1536;
 
 function createDefaultEmbeddings () {
-  return nj.zeros([0, EMBED_DIM], 'int32');
+  return nj.default.zeros([0, EMBED_DIM], 'int32');
 }
 
 class CacheContent {
@@ -72,8 +72,8 @@ export class LocalCache extends Memory {
     }
     this._data.texts.push(text);
     const embedding = await createEmbeddingWithAda(text);
-    const vector = nj.array(embedding, 'float32');
-    this._data.embeddings = nj.concatenate(
+    const vector = nj.default.array(embedding, 'float32');
+    this._data.embeddings = nj.default.concatenate(
       this._data.embeddings,
       vector,
     );
@@ -101,7 +101,7 @@ export class LocalCache extends Memory {
     try {
 
       const embedding = await createEmbeddingWithAda(text);
-      const scores = nj.dot(this._data.embeddings, embedding);
+      const scores = nj.default.dot(this._data.embeddings, embedding);
       
       let sorted: Int32Array = argsort(scores.selection.data);
       const arr = Array.from(sorted).splice(-numRelevant);

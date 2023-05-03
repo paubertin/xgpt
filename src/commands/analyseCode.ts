@@ -1,5 +1,4 @@
-import { callAIFunction } from "../llm.utils";
-import { Command } from "./command";
+import { callAIFunction } from "../llm.utils.js";
 
 const command: ((opts: {
   name: string,

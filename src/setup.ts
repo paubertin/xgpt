@@ -1,28 +1,25 @@
-import readline from 'readline/promises';
-import { AIConfig } from './config/ai.config';
-import { Message } from './openai';
-import { createChatCompletion } from './llm.utils';
-import { Config } from './config';
-import { Logger } from './log/logger';
+import { AIConfig } from './config/ai.config.js';
+import { Message } from './openai.js';
+import { createChatCompletion } from './llm.utils.js';
+import { Config } from './config/index.js';
+import { Color, Logger } from './logs.js';
+import { cleanInput } from './utils.js';
 
 /**
  * Prompt the user for input
  */
 export async function promptUser () {
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  Logger.type('Welcome to Auto-GPT! ', Color.green, 'run with \'--help\' for more informations.');
+  Logger.type('Create an AI assistant:', Color.green, 'input \'--manual\' to enter manual mode.');
 
-  Logger.log('Welcome to X-GPT! Run with \'help\' for more informations.\n');
-
-  Logger.log('Create an AI assistant: input \'--manual\' to enter manual mode');
-
-  let userDesire = await rl.question('I want X-GPT to ');
+  let userDesire = await cleanInput('I want X-GPT to: ', Color.cyan);
 
   if (userDesire === '') {
-    userDesire = 'Write a wikipedia style article about the project: https://github.com/paubertin/xgpt.git'
+    userDesire = 'Write a wikipedia style article about the project: https://github.com/paubertin/Auto-GPT-node'
   }
 
   if (userDesire.includes('--manual')) {
-    Logger.log('Manual mode selected');
+    Logger.type('Manual mode selected', Color.green);
     return await generateAIConfigManual();
   }
   else {
@@ -30,38 +27,44 @@ export async function promptUser () {
       return await generateAIConfigAuto(userDesire);
     }
     catch (err: any) {
-      Logger.error('Unable to automatically generate AI config based on user desire...');
-      Logger.error('Falling back to manual mode');
+      Logger.type('Unable to automatically generate AI config based on user desire.', Color.red, 'Falling back to manual mode.');
       return await generateAIConfigManual();
     }
   }
 }
 
+/**
+ * Interactively create an AI configuration by prompting the user to provide the name, role, and goals of the AI.
+ * 
+ * This function guides the user through a series of prompts to collect the necessary information to create
+ * an AIConfig object. The user will be asked to provide a name and role for the AI, as well as up to five
+ * goals. If the user does not provide a value for any of the fields, default values will be used.
+ */
 async function generateAIConfigManual () {
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
   let aiName: string = 'Smith';
-  Logger.log('Create an AI assistant');
-  Logger.log('Enter the name of your AI and its role below. Entering nothing will load defaults.\n');
-  let answer = await rl.question('\tAI name :');
+  Logger.type('Create an AI assistant:', Color.green, 'Enter the name of your AI and its role below. Entering nothing will load defaults.');
+
+  Logger.type('Name your AI: ', Color.green, 'For example, \'Entrepreneur-GPT\'');
+
+  const answer = await cleanInput('\tAI name : ');
   if (answer) {
     aiName = answer;
   }
 
-  Logger.log('\n');
-  Logger.log(`${aiName} here! I am at your service.\n`);
+  Logger.type(`${aiName} here!`, Color.cyan, 'I am at your service.');
 
-  Logger.log('Describe your AI\'s role: For example, \'an AI designed to autonomously develop and run businesses with the sole goal of increasing your net worth.\'');
-  Logger.log('Entering nothing will load defaults.\n')
-  let aiRole = await rl.question(`\t${aiName} role is :`);
+  Logger.type('Describe your AI\'s role: ', Color.green, 'For example, \'an AI designed to autonomously develop and run businesses with the sole goal of increasing your net worth.\'');
+
+  let aiRole = await cleanInput(`\t${aiName} role is: `);
   if (!aiRole) {
     aiRole = 'an AI designed to autonomously develop and run businesses with the sole goal of increasing your net worth.';
   }
 
-  Logger.log('Enter up to 5 goals for your AI: For example: \n\'Increase net worth, Grow Twitter Account, Develop and manage multiple businesses autonomously\'');
-  Logger.log('Entering nothing will load defaults.\n')
+  Logger.type('Enter up to 5 goals for your AI: ', Color.green, 'For example: \n\'Increase net worth, Grow Twitter Account, Develop and manage multiple businesses autonomously\'');
+  Logger.info('Enter nothing to load defaults, enter nothing when finished.');
   const aiGoals: string[] = [];
   for (let i = 0; i < 5; ++i) {
-    let aiGoal = await rl.question(`\tGoal #${i + 1} :`);
+    let aiGoal = await cleanInput(`\t${Color.cyan}Goal${Color.reset} #${i + 1}: `);
     if (!aiGoal) {
       break;
     }
@@ -73,9 +76,9 @@ async function generateAIConfigManual () {
     aiGoals.push('Develop and manage multiple businesses autonomously');
   }
 
-  Logger.log('Enter your budget for API calls: for example $1.50');
-  Logger.log('Enter nothing to let the AI run without monetary limit.\n');
-  let apiBudget: string | number = await rl.question(`\tBudget: $`);
+  Logger.type('Enter your budget for API calls: ', Color.green, 'For example: $1.50');
+  Logger.info('Enter nothing to let the AI run without monetary limit.');
+  let apiBudget: string | number = await cleanInput(`\t${Color.cyan}Budget${Color.reset}: $`);
   if (apiBudget === '') {
     apiBudget = 0.0;
   }
@@ -84,7 +87,7 @@ async function generateAIConfigManual () {
       apiBudget = parseFloat(apiBudget.replace('$', ''));
     }
     catch (err: any) {
-      Logger.error('Invalid budget input. Setting budget to unlimited');
+      Logger.type('Invalid budget input. Setting budget to unlimited', Color.red);
       apiBudget = 0.0;
     }
   }
@@ -135,7 +138,6 @@ Goals:
   const aiGoals = [ ...output.matchAll(/(?<=\n)-\s*(.*)/g)].map((g) => g.at(1)).filter(Boolean) as string[];
   const apiBudget = 0.0;
   if (!aiName || !aiRole || aiGoals.length === 0) {
-    Logger.error('Unable to extract sufficient information automatically...');
     throw new Error('Unable to extract sufficient information...');
   }
   return new AIConfig(aiName, aiRole, aiGoals, apiBudget);

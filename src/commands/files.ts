@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { Config } from '../config';
+import { Config } from '../config/index.js';
 
 async function checkDuplicateOperation (op: string, fileName: string) {
   const logContent = await readFile(Config.fileLoggerPath);
@@ -63,7 +63,7 @@ export async function searchFiles (directory: string) {
     if (file.startsWith('.')) {
       continue;
     }
-    const relativePath = path.relative(path.join(directory, file), Config.workspacePath);
+    const relativePath = path.relative(path.join(directory, file), Config.workspaceDirectory);
     foundFiles.push(relativePath);
   }
   return foundFiles;

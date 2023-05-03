@@ -2,10 +2,10 @@ import JSSoup from 'jssoup';
 import fs from 'fs';
 
 import { Builder, By, Key, ThenableWebDriver, until } from 'selenium-webdriver';
-import chrome, { Options as ChromeOptions } from 'selenium-webdriver/chrome';
-import { summarizeText } from '../processing/text';
-import { extractHyperlinks, formatHyperlinks } from '../processing/html';
-import { Logger } from '../log/logger';
+import chrome, { Options as ChromeOptions } from 'selenium-webdriver/chrome.js';
+import { summarizeText } from '../processing/text.js';
+import { extractHyperlinks, formatHyperlinks } from '../processing/html.js';
+import { Logger } from '../logs.js';
 
 const invalidProtocolRegex = /^([^\w]*)(javascript|data|vbscript)/im;
 const htmlEntitiesRegex = /&#(\w+)(^\w|;)?/g;
@@ -160,8 +160,8 @@ export async function browseWebsite (url: string, question: string) {
 
   await closeBrowser(driver);
 
-  Logger.log('summary', summaryText);
-  Logger.log('links', links);
+  // Logger.log('summary', summaryText);
+  // Logger.log('links', links);
 
   return {
     response: `Answer gathered from website: ${summaryText} \n \n Links: ${links}`,

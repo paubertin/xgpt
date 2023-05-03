@@ -1,4 +1,4 @@
-import { getSimilarity } from "./utils";
+import { getSimilarity } from "./utils.js";
 
 export class Doc {
   private _doc: { cats?: any; is_tagged?: boolean; is_parsed?: boolean; is_sentenced?: boolean };

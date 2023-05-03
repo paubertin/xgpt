@@ -1,6 +1,6 @@
-import { addCache, findCache } from "./cache";
-import Type from './type';
-import fs from "fs";
+import { addCache, findCache } from "./cache.js";
+import Type from './type.js';
+
 export default async (
   ProcessEmitter,
   pyshell,

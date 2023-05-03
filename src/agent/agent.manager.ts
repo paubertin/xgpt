@@ -1,6 +1,6 @@
-import { IAgent } from "../interfaces";
-import { createChatCompletion } from "../llm.utils";
-import { Message } from "../openai";
+import { IAgent } from "../interfaces.js";
+import { createChatCompletion } from "../llm.utils.js";
+import { Message } from "../openai.js";
 
 
 /**

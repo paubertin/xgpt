@@ -1,5 +1,5 @@
-import { Command } from "../commands/command";
-import { CommandRegistry } from "../commands/registry";
+import { Command } from "../commands/command.js";
+import { CommandRegistry } from "../commands/registry.js";
 
 export interface ResponseJSONFormat {
   thoughts: {
@@ -118,55 +118,6 @@ export class PromptGenerator {
       + `${this.generateNumberedList(this.performanceEvaluation)}\n\n`
       + 'You should only respond in JSON format as described below without any other commentary.\n\nResponse Format:\n'
       + JSON_SCHEMA
-      /*
-      + `{
-        "type": "object",
-        "properties": {
-            "thoughts": {
-                "type": "object",
-                "properties": {
-                    "text": {"type": "string"},
-                    "reasoning": {"type": "string"},
-                    "plan": {"type": "string"},
-                    "criticism": {"type": "string"},
-                    "speak": {"type": "string"}
-                },
-                "required": ["text", "reasoning", "plan", "criticism", "speak"],
-                "additionalProperties": false
-            },
-            "command": {
-                "type": "object",
-                "properties": {
-                    "name": {"type": "string"},
-                    "args": {
-                        "type": "object"
-                    }
-                },
-                "required": ["name", "args"],
-                "additionalProperties": false
-            }
-        },
-        "required": ["thoughts", "command"],
-        "additionalProperties": false
-      }`
-      */
-      /*
-      + '{\n'
-      + '\tthoughts: {'
-      + '\t\ttext: \'thought\','
-      + '\t\treasoning: \'reasoning\','
-      + '\t\tplan: \'- short bulleted\n- list that conveys\n- long-term plan\','
-      + '\t\tcriticism: \'constructive self-criticism\','
-      + '\t\tspeak: \'thoughts summary to say to user\''
-      + '\t},'
-      + '\tcommand: {'
-      + '\t\tname: \'command name\','
-      + '\t\targs: {'
-      + '\t\t\targName: \'value\''
-      + '\t\t}'
-      + '\t}'
-      + '}\n\n'
-      */
      + '\n\n'
       + 'Ensure the response can be parsed by Javascript JSON.parse method.';
   }

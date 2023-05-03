@@ -1,8 +1,6 @@
 import { PythonShell } from "python-shell";
-import events, { EventEmitter } from "events";
 
-import { sleepAsync } from "../sleep";
-import { Message, Model } from "../openai";
+import { Message, Model } from "../openai.js";
 
 export class Python {
 

@@ -1,19 +1,9 @@
 import fs from 'fs';
 import path from 'path';
-import { Config } from './config';
-import { ValueError } from '@d4c/numjs/build/main/lib/errors';
-import { AutoGPTError } from './utils';
-import { Logger } from './logger';
-
-export const workspacePath = path.join(process.cwd(), 'xgpt-workspace');
-
-if (!fs.existsSync(workspacePath)) {
-  fs.mkdirSync(workspacePath);
-}
-
-export function pathInWorkspace (relativePath: string) {
-  return safePathJoin(workspacePath, relativePath);
-}
+import { Config } from './config/index.js';
+import { ValueError } from '@d4c/numjs/build/main/lib/errors.js';
+import { AutoGPTError } from './utils.js';
+import { Logger } from './logs.js';
 
 export function safePathJoin (base: string, paths: string) {
   const basePath = path.resolve(base);

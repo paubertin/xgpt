@@ -1,10 +1,9 @@
 import { PythonShell } from "python-shell";
-import Parse from "./parse";
-import events, { EventEmitter } from "events";
-import Type from "./type";
+import Parse from "./parse.js";
+import { EventEmitter } from "events";
 
-import InstallPythonPackages from "./InstallPythonPackages";
-import { sleepAsync } from "../sleep";
+import InstallPythonPackages from "./InstallPythonPackages.js";
+import { sleepAsync } from "../sleep.js";
 
 export class Python {
 

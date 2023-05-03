@@ -1,6 +1,5 @@
-import { Config } from "../config";
-import { VoiceEngine } from "./base";
-import { BrianSpeech } from "./brian";
+import { VoiceEngine } from "./base.js";
+import { BrianSpeech } from "./brian.js";
 
 export function getVoiceEngine () {
   let engine: VoiceEngine;

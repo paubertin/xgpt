@@ -1,4 +1,4 @@
-import { VoiceEngine } from "./base";
+import { VoiceEngine } from "./base.js";
 import fs from 'fs';
 import { exec } from 'child_process';
 import { promisify } from 'util';

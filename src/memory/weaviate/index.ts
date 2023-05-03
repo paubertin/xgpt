@@ -1,4 +1,4 @@
-import { EmbeddedDB, EmbeddedOptions } from './embedded';
+import { EmbeddedDB, EmbeddedOptions } from './embedded.js';
 import weaviate, { ConnectionParams, WeaviateClient } from 'weaviate-ts-client';
 
 export interface EmbeddedClient extends WeaviateClient {
@@ -8,7 +8,7 @@ export interface EmbeddedClient extends WeaviateClient {
 const app = {
   client: function (embedded: EmbeddedOptions, conn?: ConnectionParams): EmbeddedClient {
     if (!conn) conn = { host: '127.0.0.1:6666', scheme: 'http' };
-    const client = weaviate.client(conn);
+    const client = weaviate.default.client(conn);
     const embeddedClient: EmbeddedClient = {
       ...client,
       embedded: new EmbeddedDB(embedded),
@@ -18,4 +18,4 @@ const app = {
 };
 
 export default app;
-export * from './embedded';
+export * from './embedded.js';

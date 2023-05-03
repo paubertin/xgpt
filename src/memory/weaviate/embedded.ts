@@ -8,7 +8,6 @@ import { homedir } from 'os';
 import { join } from 'path';
 import { extract } from 'tar';
 import { createHash } from 'crypto';
-import { Color, Logger } from '../../logger';
 
 const defaultBinaryPath = join(homedir(), '.cache/weaviate-embedded');
 const defaultPersistenceDataPath = join(homedir(), '.local/share/weaviate');

@@ -1,6 +1,5 @@
-import { NotImplementedError } from "@d4c/numjs/build/main/lib/errors";
-import { PromptGenerator, ResponseJSONFormat } from "./prompts/generator";
-import { CommandRegistry } from "./commands/registry";
+import { PromptGenerator, ResponseJSONFormat } from "./prompts/generator.js";
+import { CommandRegistry } from "./commands/registry.js";
 
 export function getCommand (json: ResponseJSONFormat) {
   return {

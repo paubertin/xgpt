@@ -1,65 +1,60 @@
-import { Config } from "./config";
-import { createChatCompletion } from "./llm.utils";
-import { Memory } from "./memory/base";
-import { Message, Model, Role } from "./openai";
-import { countMessageTokens } from "./token-counter";
-import { sleepAsync } from "./sleep";
+import { Config } from "./config/index.js";
+import { createChatCompletion } from "./llm.utils.js";
+import { Memory } from "./memory/base.js";
+import { Message, Model, Role } from "./openai.js";
+import { countMessageTokens } from "./token-counter.js";
+import { sleepAsync } from "./sleep.js";
+import { Logger } from "./logs.js";
+import { Agent } from "./agent/agent.js";
+import { getNewlyTrimmedMessages, updateRunningSummary } from "./memory-management/summary-memory.js";
 
-export async function chatWithAI (prompt: string, userInput: string, fullMessageHistory: Message[], tokenLimit: number) {
+/**
+ * Interact with the OpenAI API, sending the prompt, user input, message history, and permanent memory
+ */
+export async function chatWithAI (agent: Agent, prompt: string, userInput: string, fullMessageHistory: Message[], tokenLimit: number) {
   let loop = true;
   while (loop) {
     try {
       const model = Config.fastLLMModel;
+      Logger.debug(`Token limit: ${tokenLimit}`);
       const sendTokenLimit = tokenLimit - 1000;
 
-      let relevantMemory = fullMessageHistory.length === 0 ? [] : await Memory.getRelevant('[' + fullMessageHistory.map((v) => '\'' + v + '\'').join(',') + ']', 10);
+      const relevantMemory = '';
+      Logger.debug(`Memory stats: ${await Memory.getStats()}`);
 
-      console.log('Memory stats', await Memory.getStats());
+      let {
+        nextMessageToAddIndex,
+        currentTokensUsed,
+        insertionIndex,
+        currentContext
+      } = await generateContext(prompt, fullMessageHistory, model);
 
-      let context = await generateContext(prompt, relevantMemory, fullMessageHistory, model);
+      currentTokensUsed += await countMessageTokens([createChatMessage('user', userInput)], model);
 
-      while (context.currentTokensUsed > 2500) {
-        relevantMemory = relevantMemory.splice(-1);
-        context = await generateContext(prompt, relevantMemory, fullMessageHistory, model);
-      }
+      currentTokensUsed += 500;
 
-      context.currentTokensUsed += await countMessageTokens([createChatMessage('user', userInput)], model);
-
-      while (context.nextMessageToAddIndex >=0) {
-        const messageToAdd = fullMessageHistory[context.nextMessageToAddIndex];
+      while (nextMessageToAddIndex >=0) {
+        const messageToAdd = fullMessageHistory[nextMessageToAddIndex];
         const tokensToAdd = await countMessageTokens([ messageToAdd ], model);
-        if (context.currentTokensUsed + tokensToAdd > sendTokenLimit) {
+        if (currentTokensUsed + tokensToAdd > sendTokenLimit) {
           break;
         }
-        context.currentContext.splice(context.insertionIndex, 0, fullMessageHistory[context.nextMessageToAddIndex]);
+        currentContext.splice(insertionIndex, 0, fullMessageHistory[nextMessageToAddIndex]);
 
-        context.currentTokensUsed += tokensToAdd;
-        context.nextMessageToAddIndex -= 1;
+        currentTokensUsed += tokensToAdd;
+        nextMessageToAddIndex -= 1;
       }
 
-      context.currentContext.push(createChatMessage('user', userInput));
+      if (fullMessageHistory.length > 0) {
+        const { newMessagesNotInContext, newIndex } = getNewlyTrimmedMessages(fullMessageHistory, currentContext, agent.lastMemoryIndex);
+        agent.lastMemoryIndex = newIndex;
 
-      for (const plugin of Config.plugins) {
-        // TODO: plugins...
-        /**
-                if not plugin.can_handle_on_planning():
-                    continue
-                plugin_response = plugin.on_planning(
-                    agent.prompt_generator, current_context
-                )
-                if not plugin_response or plugin_response == "":
-                    continue
-                tokens_to_add = token_counter.count_message_tokens(
-                    [create_chat_message("system", plugin_response)], model
-                )
-                if current_tokens_used + tokens_to_add > send_token_limit:
-                    if cfg.debug_mode:
-                        print("Plugin response too long, skipping:", plugin_response)
-                        print("Plugins remaining at stop:", plugin_count - i)
-                    break
-                current_context.append(create_chat_message("system", plugin_response))
-         */
+        agent.summarymemory = await updateRunningSummary(agent.summarymemory, newMessagesNotInContext);
+
+        currentContext.splice(insertionIndex, 0, agent.summarymemory);
       }
+
+      currentContext.push(createChatMessage('user', userInput));
 
       const tokensRemaining = tokenLimit - context.currentTokensUsed;
 
@@ -108,17 +103,11 @@ export function createChatMessage  (role: Role, content: string): Message {
 /**
  * Create a chat message with the given role and content.
  */
-async function generateContext (prompt: string, relevantMemory: string[], fullMessageHistory: Message[], model: Model) {
+async function generateContext (prompt: string, fullMessageHistory: Message[], model: Model) {
   const currentContext = [
     createChatMessage('system', prompt),
     createChatMessage('system', `The current time and date is ${(new Date()).toLocaleString()}`),
   ];
-
-  if (relevantMemory.length) {
-    currentContext.push(
-      createChatMessage('system', `This reminds you of these events from your past:\n${relevantMemory}\n\n`),
-    );
-  }
 
   return {
     nextMessageToAddIndex: fullMessageHistory.length - 1,

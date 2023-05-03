@@ -1,7 +1,7 @@
 import nodeTikToken from 'tiktoken-node';
-import { Message, Model } from './openai';
-import { NotImplementedError } from '@d4c/numjs/build/main/lib/errors';
-import { Python } from './python';
+import { Message, Model } from './openai.js';
+import { NotImplementedError } from '@d4c/numjs/build/main/lib/errors.js';
+import { Python } from './python/index.js';
 
 /**
  * Returns the number of tokens used by a list of messages.

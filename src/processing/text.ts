@@ -1,12 +1,12 @@
 import { ThenableWebDriver } from 'selenium-webdriver';
-import { Message } from '../openai';
-import { Config } from '../config';
-import { Python } from '../spacy';
-import { countMessageTokens } from '../token-counter';
+import { Message } from '../openai.js';
+import { Config } from '../config/index.js';
+import { Python } from '../spacy/index.js';
+import { countMessageTokens } from '../token-counter.js';
 import { TiktokenModel } from '@dqbd/tiktoken';
-import { createChatCompletion } from '../llm.utils';
-import { Logger } from '../log/logger';
-import { Memory } from '../memory/base';
+import { createChatCompletion } from '../llm.utils.js';
+import { Memory } from '../memory/base.js';
+import { Logger } from '../logs.js';
 
 async function scrollToPercentage (driver: ThenableWebDriver, ratio: number) {
   try {
@@ -17,7 +17,7 @@ async function scrollToPercentage (driver: ThenableWebDriver, ratio: number) {
     await driver.executeScript(`window.scrollTo(0, document.body.scrollHeight * ${ratio})`);
   }
   catch (e) {
-    Logger.error(e);
+    // Logger.error(e);
   }
 }
 

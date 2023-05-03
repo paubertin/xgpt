@@ -1,27 +1,20 @@
-import { Config, ConfigOptions } from './config';
-import { Color, LogLevel, Logger } from './logger';
+import { Config, ConfigOptions } from './config/index.js';
+import { Color, LogLevel, Logger } from './logs.js';
 import argparse from 'argparse';
-import { constructMainAIConfig } from './prompts';
-import { Agent } from './agent/agent';
-import { OpenAI } from './openai';
-import { googleSearch } from './commands/googleSearch';
-import { CommandRegistry } from './commands/registry';
-import { command } from './commands/command';
-import { appendToFile, createDir, readFile, searchFiles, writeFile } from './commands/files';
-import { Workspace } from './workspace';
+import { DEFAULT_TRIGGERING_PROMPT, constructMainAIConfig } from './prompts/index.js';
+import { Agent } from './agent/agent.js';
+import { OpenAI } from './openai.js';
+import { CommandRegistry } from './commands/registry.js';
+import { Workspace } from './workspace.js';
 import path from 'path';
 import fs from 'fs';
-import { browseWebsite } from './commands/web';
-import { Python } from './spacy';
-import { deleteAgent, listAgents, messageAgent, startAgent } from './commands/agents';
-import { AgentManager } from './agent/agent.manager';
-import { Memory } from './memory/base';
-import readline from 'readline/promises';
-import { sayText } from './speech';
-import { getMemory } from './memory';
-import { AutoGPTError } from './utils';
-import { prototype } from 'events';
+import { Python } from './spacy/index.js';
+import { Memory } from './memory/base.js';
+import { getMemory } from './memory/index.js';
+import { AutoGPTError } from './utils.js';
+import { commands } from './commands/index.js';
 
+import { Spinner } from './log/spinner.js';
 
 const parser = new argparse.ArgumentParser({});
 
@@ -38,161 +31,77 @@ parser.add_argument('-m', '--use-memory', { metavar: 'memory_type', type: 'str',
 parser.add_argument('--allow-downloads', { action: 'store_true', help: 'Dangerous: Allows Auto-GPT to download files natively' });
 
 export async function main () {
-
   try {
-    const workspaceDirectory: string = 'xgpt-workspace';
-
     
     const parsedArgs: ConfigOptions = parser.parse_args();
     
     await Logger.init();
     Logger.level = parsedArgs.debug ? LogLevel.DEBUG : LogLevel.INFO;
+
+    process.on('SIGINT', () => {
+      Logger.info('You interrupted Auto-GPT');
+      Logger.info('Quitting...');
+      throw new AutoGPTError('Auto-GPT interrupt', () => process.exit(0));
+    });
+  
     Config.init(parsedArgs);
-
-
     Config.checkOpenAIAPIKey();
+  
     OpenAI.init();
-    const memory = await getMemory(true);
 
-    AgentManager.init();
-    await Python.init();
+    const workspaceDirectory = Workspace.makeWorkspace(Config.workspaceDirectory);
 
-    const registry = new CommandRegistry();
-
-    registry.register(command(googleSearch, {
-      name: 'google',
-      description: 'Google search',
-      args: {
-        query: '<query>',
-      },
-      enabled: Config.googleApiKey !== undefined,
-    }));
-
-    registry.register(command(createDir, {
-      name: 'createDir',
-      description: 'Create a directory',
-      args: {
-        directory: '<directory>',
-      },
-    }));
-
-    registry.register(command(writeFile, {
-      name: 'writeFile',
-      description: 'Write to file',
-      args: {
-        fileName: '<fileName>',
-        content: '<content>',
-      },
-    }));
-
-    registry.register(command(appendToFile, {
-      name: 'appendToFile',
-      description: 'Append to file',
-      args: {
-        fileName: '<fileName>',
-        content: '<content>',
-        shouldLog: '<shouldLog>',
-      },
-    }));
-
-    registry.register(command(readFile, {
-      name: 'readFile',
-      description: 'Read a file',
-      args: {
-        fileName: '<fileName>',
-      },
-    }));
-
-    registry.register(command(searchFiles, {
-      name: 'searchFiles',
-      description: 'Search files in a directory',
-      args: {
-        directory: '<directory>',
-      },
-    }));
-
-    registry.register(command(browseWebsite, {
-      name: 'browseWebsite',
-      description: 'Browse Website',
-      args: {
-        url: '<url>',
-        question: '<what_you_want_to_find_on_website>',
-      },
-    }));
-
-    registry.register(command(startAgent, {
-      name: 'startAgent',
-      description: 'Start a GPT agent with a given name, task, and prompt',
-      args: {
-        name: '<name>',
-        task: '<task>',
-        prompt: '<prompt>',
-      },
-    }));
-
-    registry.register(command(messageAgent, {
-      name: 'messageAgent',
-      description: 'Message an agent with a given key and message',
-      args: {
-        key: '<key>',
-        message: '<message>',
-      },
-    }));
-
-    registry.register(command(listAgents, {
-      name: 'listAgents',
-      description: 'List all agents available',
-      args: {
-      },
-    }));
-
-    registry.register(command(deleteAgent, {
-      name: 'deleteAgent',
-      description: 'Delete an agent with a given key',
-      args: {
-        key: '<key>',
-      },
-    }));
-
-    const workspacePath = Workspace.makeWorkspace(workspaceDirectory);
-
-    const aiConfig = await constructMainAIConfig();
-
-    aiConfig.commandRegistry = registry;
-
-    const systemPrompt = aiConfig.constructFullPrompt();
-    // Logger.debug('Prompt', systemPrompt);
-
-    const triggeringPrompt = 'Determine which next command to use, and respond using the format specified above:';
-
-
-    Config.workspacePath = workspacePath;
-
-    const fileLoggerPath = path.join(workspacePath, 'file_logger.txt');
+    const fileLoggerPath = path.join(workspaceDirectory, 'file_logger.txt');
     if (!fs.existsSync(fileLoggerPath)) {
-      await fs.promises.writeFile(fileLoggerPath, 'File Operation Logs\n\n', { encoding: 'utf-8' });
+      await fs.promises.writeFile(fileLoggerPath, 'File Operation Logger\n\n', { encoding: 'utf-8' });
     }
 
     Config.fileLoggerPath = fileLoggerPath;
 
-    const agent = new Agent({
-      aiName: '',
-      fullMessageHistory: [],
-      nextActionCount: 0,
-      commandRegistry: registry,
-      config: aiConfig,
-      systemPrompt,
-      triggeringPrompt,
-      workspaceDirectory: workspacePath,
+    const commandRegistry = new CommandRegistry();
+
+    commands().forEach((command) => {
+      commandRegistry.register(command);
     });
 
-    agent.startInteractionLoop();
+    const aiName: string = '';
 
+    const aiConfig = await constructMainAIConfig();
+    aiConfig.commandRegistry = commandRegistry;
+  
+    const fullMessageHistory = [];
+    const nextActionCount = 0;
+
+    const memory = await getMemory(true);
+
+    Logger.type('Using memory of type:', Color.green, memory.constructor.name);
+    
+    const systemPrompt = aiConfig.constructFullPrompt();
+
+    if (Config.debugMode) {
+      Logger.type('Prompt:', Color.green, systemPrompt);
+    }
+
+    const agent = new Agent({
+      aiName,
+      fullMessageHistory,
+      nextActionCount,
+      commandRegistry,
+      config: aiConfig,
+      systemPrompt,
+      triggeringPrompt: DEFAULT_TRIGGERING_PROMPT,
+      workspaceDirectory,
+    });
+  
+    agent.startInteractionLoop();
+  
     shutdown(0);
+
+    await Python.init();
   }
   catch (err: any) {
     if (err instanceof AutoGPTError) {
-      Logger.print(Color.red, 'AutoGPTError: '+ err.message);
+      // Logger.print(Color.red, 'AutoGPTError: '+ err.message);
       if (err.callback) {
         shutdown(err.callback);
       }

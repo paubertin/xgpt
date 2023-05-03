@@ -1,10 +1,13 @@
-import { Command } from "../commands/command";
-import { Config } from "../config";
-import { AIConfig } from "../config/ai.config";
-import { Logger } from "../log/logger";
-import { promptUser } from "../setup";
-import { PromptGenerator } from "./generator";
-import readline from 'readline/promises';
+import { Command } from "../commands/command.js";
+import { Config } from "../config/index.js";
+import { AIConfig } from "../config/ai.config.js";
+import { ApiManager } from "../llm/apiManager.js";
+import { Color, Logger } from "../logs.js";
+import { promptUser } from "../setup.js";
+import { cleanInput } from "../utils.js";
+import { PromptGenerator } from "./generator.js";
+
+export const DEFAULT_TRIGGERING_PROMPT = 'Determine which next command to use, and respond using the format specified above:';
 
 /**
  * This function generates a prompt string that includes various constraints, commands, resources, and performance evaluations.
@@ -23,11 +26,11 @@ export function buildDefaultPromptGenerator () {
 
   promptGenerator.addConstraint('No user assistance');
 
-  promptGenerator.addConstraint('Exclusively use the commands listed in double quotes e.g. "command name"');
+  promptGenerator.addConstraint('Exclusively use the commands listed in double quotes e.g. "commandName"');
 
   const commands: Command[] = [
     new Command('doNothing', 'Do Nothing'),
-    new Command('taskComplete', 'Task Complete (Shutdown)', undefined, { reason: '<reason>' }),
+    new Command('taskComplete', 'Task Complete (Shutdown)', undefined, { reason: 'reason' }),
   ];
 
   commands.forEach((command) => {
@@ -54,45 +57,41 @@ export function buildDefaultPromptGenerator () {
 export async function constructMainAIConfig () {
   let config = AIConfig.load(Config.aiSettingsFile);
 
-  if (Config.skipReprompt && config.name) {
-    console.log('Name : ', config.name);
-    console.log('Role : ', config.role);
+  if (Config.skipReprompt && config.aiName) {
+    Logger.type('Name: ', Color.green, config.aiName);
+    Logger.type('Role: ', Color.green, config.role);
     if (config.goals.length) {
-      console.log('Goals : ');
-      config.goals.forEach((goal) => {
-        console.log('\t', goal);
-      });
+      Logger.type('Goals: \n', Color.green, config.goals.map((goal) => `\t${goal}`));
     }
   }
-  else if (config.name) {
-    console.log(`Welcome back! Would you like me to return to being ${config.name}.`);
-    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-    const answer = await rl.question('Continue with last settings?'
+  else if (config.aiName) {
+    Logger.type('Welcome back! ', Color.green, `Would you like me to return to being ${config.aiName}?`);
+    const answer = await cleanInput('Continue with last settings?'
     + '\n'
-    + `Name:  ${config.name}`
+    + `Name:  ${config.aiName}`
     + '\n'
     + `Role:  ${config.role}`
     + '\n'
     + (config.goals.length ? `Goals:\n` : '')
-    + (config.goals.length ? `${config.goals.map((g) => '\t. ' + g).join('\n')}\n\n` : '\n')
-    + 'Continue (y/n):');
-    if (answer.toLowerCase() === 'n') {
+    + (config.goals.length ? `${config.goals.map((g) => '\t. ' + g).join('\n')}\n` : '')
+    + `API Budget: ${config.apiBudget <= 0 ? 'infinite' : `$${config.apiBudget}`}\n\n`
+    + `Continue (${Config.authorizeKey}/${Config.exitKey}):`);
+    if (answer.toLowerCase() === Config.exitKey) {
       config = new AIConfig();
     }
   }
 
-  if (!config.name) {
+  if (!config.aiName) {
     config = await promptUser();
     config.save(Config.aiSettingsFile);
   }
 
-  Logger.log(`${config.name} has been created with the following details:`);
-  Logger.log(`  Name: ${config.name}`);
-  Logger.log(`  Role: ${config.role}`);
-  Logger.log(`  Goals:`);
-  for (const goal of config.goals) {
-    Logger.log(`   - ${goal}`);
-  }
+  const apiManager = new ApiManager();
+  apiManager.totalBudget = config.apiBudget;
 
+  Logger.type(config.aiName, Color.cyan, ' has been created with the following details:');
+  Logger.type('  Name: ', Color.green, config.aiName);
+  Logger.type('  Role: ', Color.green, config.role);
+  Logger.type('  Goals:\n', Color.green, config.goals.map((goal) => `\t${goal}`));
   return config;
 }

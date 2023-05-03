@@ -1,7 +1,7 @@
-import { Config } from "../config";
-import { Memory } from "./base";
-import { LocalCache } from "./local";
-import { WeaviateMemory } from "./weaviate";
+import { Config } from "../config/index.js";
+import { Memory } from "./base.js";
+import { LocalCache } from "./local.js";
+import { WeaviateMemory } from "./weaviate.js";
 
 export const SUPPORTED_MEMORIES = [
   'local',

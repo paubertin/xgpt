@@ -1,10 +1,10 @@
 import * as dotenv from 'dotenv';
-import { Color, Logger } from '../logger';
-import { XGPTPlugin } from '../plugins/plugin.template';
-import { Model } from '../openai';
-import { SUPPORTED_MEMORIES } from '../memory';
+import { Color, Logger } from '../logs.js';
+import { Model } from '../openai.js';
+import { SUPPORTED_MEMORIES } from '../memory/index.js';
 import fs from 'fs';
-import { AutoGPTError } from '../utils';
+import { AutoGPTError } from '../utils.js';
+import path from 'path';
 
 export interface ConfigOptions {
   continuous?: boolean;
@@ -153,7 +153,6 @@ export class Config {
   public static get executeLocalCommands () { return this.instance.executeLocalCommands; }
   public static get memoryBackend () { return this.instance.memoryBackend; }
   public static get memoryIndex () { return this.instance.memoryIndex; }
-  public static get plugins () { return this.instance.plugins; }
   public static get googleApiKey () { return this.instance.googleApiKey; }
   public static get customSearchEngineId () { return this.instance.customSearchEngineId; }
   public static get restrictToWorkspace () { return this.instance.restrictToWorkspace; }
@@ -171,14 +170,8 @@ export class Config {
   public static get embeddingModel () { return this.instance.embeddingModel; }
   public static get embeddingTokenizer () { return this.instance.embeddingTokenizer; }
   public static get embeddingTokenLimit () { return this.instance.embeddingTokenLimit; }
-  
-  public static get workspacePath () {
-    const res = this.instance.workspacePath;
-    if (!res) { throw new Error('workspacePath has ot been set') }
-    return res;
-  }
 
-  public static set workspacePath (p: string) { this.instance.workspacePath = p; }
+  public static get workspaceDirectory () { return this.instance.workspaceDirectory; }
 
   public static get fileLoggerPath () {
     const res = this.instance.fileLoggerPath;
@@ -228,6 +221,8 @@ export class Config {
 
     this.memoryBackend = this.getEnv('MEMORY_BACKEND', 'local');
     this.memoryIndex = this.getEnv('MEMORY_INDEX', 'auto-gpt');
+
+    this.workspaceDirectory = this.getEnv('WORKSPACE_DIRECTORY', path.join(process.cwd(), 'auto_gpt_workspace'));
     
   }
   
@@ -294,10 +289,9 @@ export class Config {
 
   private googleApiKey?: string;
   private customSearchEngineId?: string;
-  private plugins: XGPTPlugin[] = [];
   private restrictToWorkspace: boolean;
 
-  private workspacePath?: string;
+  private workspaceDirectory: string;
   private fileLoggerPath?: string;
 
   private authorizeKey: string;

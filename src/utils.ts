@@ -1,4 +1,8 @@
 import fs from 'fs';
+import readline from 'readline/promises';
+import { Color, Logger } from './logs.js';
+
+const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 
 export async function exists (path: string) {
   try {
@@ -17,4 +21,13 @@ export class AutoGPTError extends Error {
     super(message);
     this.callback = cb;
   }
+}
+
+export async function cleanInput (prompt: string, color?: Color) {
+  Logger.info('Asking user via keyboard...');
+  if (color) {
+    prompt = `${color}${prompt}${Color.reset}`;
+  }
+  const answer = await rl.question(prompt);
+  return answer;
 }

@@ -1,20 +1,20 @@
-import { executeCommand, getCommand } from "../app";
-import { chatWithAI, createChatMessage } from "../chat";
-import { CommandRegistry } from "../commands/registry";
-import { Config } from "../config";
-import { AIConfig } from "../config/ai.config";
-import { printAssistantThoughts } from "../logs";
-import { Memory } from "../memory/base";
-import { Message } from "../openai";
+import { executeCommand, getCommand } from "../app.js";
+import { chatWithAI, createChatMessage } from "../chat.js";
+import { CommandRegistry } from "../commands/registry.js";
+import { Config } from "../config/index.js";
+import { AIConfig } from "../config/ai.config.js";
+import { Memory } from "../memory/base.js";
+import { Message } from "../openai.js";
 import ajv from 'ajv';
-import Joi from 'joi';
 import readline from 'readline/promises';
-import { Workspace } from "../workspace";
-import { Color } from "../logger";
-import { callAIFunction } from "../llm.utils";
-import { JSON_SCHEMA } from "../prompts/generator";
+import { Workspace } from "../workspace.js";
+import { callAIFunction } from "../llm.utils.js";
+import { JSON_SCHEMA } from "../prompts/generator.js";
+import { FULL_MESSAGE_HISTORY_FILE_NAME, LogCycleHandler } from "../logcycle/logcycle.js";
+import { Color, Logger, printAssistantThoughts } from "../logs.js";
+import { Spinner } from "../log/spinner.js";
 
-const schema = (new ajv()).compile({
+const schema = (new ajv.default()).compile({
   "type": "object",
   "properties": {
       "thoughts": {
@@ -67,6 +67,12 @@ export class Agent {
   public triggeringPrompt: string;
   public workspace: Workspace;
 
+  public lastMemoryIndex: number = 0;
+  public summarymemory: string = 'I was created';
+  public createdAt = new Date();
+  public cycleCount: number = 0;
+  public logCycleHandler = new LogCycleHandler();
+
   public constructor (opts: AgentOptions) {
     this.aiName = opts.aiName;
     this.fullMessageHistory = opts.fullMessageHistory;
@@ -93,21 +99,22 @@ export class Agent {
   }
 
   public async startInteractionLoop() {
-    let loopCount = 0;
+    this.cycleCount = 0;
     let userInput: string = '';
 
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 
     while (true) {
-      loopCount += 1;
+      this.cycleCount += 1;
+      this.logCycleHandler.logCountWithinCycle = 0;
+      this.logCycleHandler.logCycle(this.config.aiName, this.createdAt, this.cycleCount, this.fullMessageHistory, FULL_MESSAGE_HISTORY_FILE_NAME);
 
-      if (Config.continuousMode && Config.continuousLimit > 0 && loopCount > Config.continuousLimit) {
-        console.error('Continuous limit reached');
+      if (Config.continuousMode && Config.continuousLimit > 0 && this.cycleCount > Config.continuousLimit) {
+        Logger.type('Continous limit reached', Color.yellow, Config.continuousLimit);
         break;
       }
 
-      const assistantReply = await chatWithAI(this.systemPrompt, this.triggeringPrompt, this.fullMessageHistory, Config.fastTokenLimit);
-      // console.log('assistantReply', assistantReply);
+      const assistantReply = await Spinner.while(chatWithAI(this, this.systemPrompt, this.triggeringPrompt, this.fullMessageHistory, Config.fastTokenLimit), 'Thinking...');
       if (!assistantReply) {
         console.log('no reply...');
         break;
@@ -183,24 +190,9 @@ export class Agent {
         result = `Human feedback: ${userInput}`;
       }
       else {
-        for (const plugin of Config.plugins) {
-          if (!plugin.canHandlePreCommand()) {
-            continue;
-          }
-          const pluginResult = plugin.preCommand(commandName, args);
-          commandName = pluginResult.commandName;
-          args = pluginResult.args;
-        }
         const commandResult = await executeCommand(this.commandRegistry, commandName, args, this.config.promptGenerator);
 
         result = `Command ${commandName} returned: ${commandResult}`;
-
-        for (const plugin of Config.plugins) {
-          if (!plugin.canHandlePostCommand()) {
-            continue;
-          }
-          result = plugin.postCommand(commandName, result);
-        }
 
         if (this.nextActionCount > 0) {
           this.nextActionCount -= 1;
@@ -234,7 +226,7 @@ async function fixAndParseJson (jsonString: string, tryToFixWithGpt: boolean = t
       // Escaping newlines in the string field values
       const regex = /"(?:[^"\\]|\\[^n])*?"/g;
       const escapedString = jsonString.replace(regex, (match) =>
-        match.replace(/\n/g, "\\\\n")
+        match.replace(/\n/g, "\\n")
       );
       return JSON.parse(escapedString);
     }

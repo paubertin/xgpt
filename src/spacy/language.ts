@@ -1,5 +1,5 @@
-import { Doc } from "./tokens";
-import { makeRequest } from "./utils";
+import { Doc } from "./tokens.js";
+import { makeRequest } from "./utils.js";
 
 export class Language {
   public constructor(public model: string, public api = 'http://localhost:8080') {

@@ -1,8 +1,8 @@
-import { Config } from "./config";
-import { Logger } from "./logger";
-import { Message, Model, OpenAI } from "./openai";
+import { Config } from "./config/index.js";
+import { Logger } from "./logs.js";
+import { Message, Model, OpenAI } from "./openai.js";
 import * as openai from 'openai';
-import { sleepAsync } from "./sleep";
+import { sleepAsync } from "./sleep.js";
 
 export async function callAIFunction (func: string, args: any[], desc: string, model: Model = Config.smartLLMModel) {
   args = args.map((arg) => arg !== null && arg !== undefined ? `${String(arg)}` : 'None');

@@ -1,5 +1,5 @@
-import { AgentManager } from "../agent/agent.manager";
-import { Config } from "../config";
+import { AgentManager } from "../agent/agent.manager.js";
+import { Config } from "../config/index.js";
 
 function isValidInt (value: string) {
   const res = parseInt(value, 10);

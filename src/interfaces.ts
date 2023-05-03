@@ -1,4 +1,4 @@
-import { Message } from "./openai";
+import { Message } from "./openai.js";
 
 export interface IAgent {
   task: any;
