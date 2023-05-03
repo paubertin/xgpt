@@ -4,7 +4,7 @@ import winston from 'winston';
 import { exists } from './utils';
 import { sayText } from './speech';
 
-enum LogLevel {
+export enum LogLevel {
   ERROR = 'error',
   WARN = 'warn',
   INFO = 'info',
@@ -45,6 +45,13 @@ export class Logger {
   }
 
   private _init () {
+  }
+
+  public static async shutdown () {
+    return await Promise.all([
+      this.instance.loggerFinished,
+      this.instance.typingLoggerFinished,
+    ]);
   }
 
   public static get instance () {
@@ -121,32 +128,48 @@ export class Logger {
         }),
       ),
     });
+
+    this.typingLoggerFinished = new Promise((resolve) => this.typingLoggerFinishedResolved = resolve);
+    this.loggerFinished = new Promise((resolve) => this.loggerFinishedResolved = resolve);
+    this.typingLogger.on('finish', () => {
+      this.typingLoggerFinishedResolved?.();
+    });
+    this.logger.on('finish', () => {
+      this.loggerFinishedResolved?.();
+    });
+
   }
 
-  private static _log (title: string = '', titleColor: string = '', message: string | string[] = '', level: LogLevel = LogLevel.INFO) {
+  private static _log (message: string | string[], title: string = '', titleColor?: Color, level: LogLevel = LogLevel.INFO) {
     if (Array.isArray(message)) {
       message = message.join(' ');
     }
     this.instance.logger.log(level, message, { title, titleColor });
   }
 
-  public static type (title: string, titleColor: string, content: number | string | string[], level: LogLevel = LogLevel.INFO) {
+  public static type (title: string, titleColor: Color, content: number | string | string[], level: LogLevel = LogLevel.INFO) {
     if (Array.isArray(content)) {
       content = content.join(' ');
     }
     this.instance.typingLogger.log(level, String(content), { title, titleColor });
   }
 
-  public static debug (title: string, titleColor: string, content: string | string[]) {
-    this._log(title, titleColor, content, LogLevel.DEBUG);
+  public static debug (content: string | string[], title?: string, titleColor?: Color) {
+    this._log(content, title, titleColor, LogLevel.DEBUG);
   }
 
-  public static warn (title: string, titleColor: string, content: string | string[]) {
-    this._log(title, titleColor, content, LogLevel.WARN);
+  public static warn (content: string | string[], title?: string, titleColor?: Color) {
+    this._log(content, title, titleColor, LogLevel.WARN);
   }
 
-  public static error (title: string, content: string | string[]) {
-    this._log(title, Color.red, content, LogLevel.ERROR);
+  public static error (content: string | string[], title?: string) {
+    this._log(content, title, Color.red, LogLevel.ERROR);
+  }
+
+  public static print (message: string): void;
+  public static print (color: Color, message: string): void;
+  public static print (messageOrColor: string | Color, message?: string): void {
+    console.log(message !== undefined ? `${messageOrColor}${message}${ResetColor}` : messageOrColor);
   }
 
   public static set level (level: LogLevel) {
@@ -158,5 +181,10 @@ export class Logger {
   private static _initialized: boolean = false;
 
   private typingLogger: winston.Logger;
-  private logger: winston.Logger
+  private logger: winston.Logger;
+
+  private typingLoggerFinished: Promise<void>;
+  private loggerFinished: Promise<void>;
+  private typingLoggerFinishedResolved?: () => void;
+  private loggerFinishedResolved?: () => void;
 }

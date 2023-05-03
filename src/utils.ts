@@ -9,3 +9,12 @@ export async function exists (path: string) {
     return false;
   }
 }
+
+export class AutoGPTError extends Error {
+  public callback?: () => void;
+
+  public constructor (message: string, cb?: () => void) {
+    super(message);
+    this.callback = cb;
+  }
+}

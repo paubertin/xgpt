@@ -2,6 +2,8 @@ import fs from 'fs';
 import path from 'path';
 import { Config } from './config';
 import { ValueError } from '@d4c/numjs/build/main/lib/errors';
+import { AutoGPTError } from './utils';
+import { Logger } from './logger';
 
 export const workspacePath = path.join(process.cwd(), 'xgpt-workspace');
 
@@ -35,7 +37,14 @@ function isSubDir (parent: string, dir: string) {
   return Boolean(relative) && !relative.startsWith('..') && !path.isAbsolute(relative);
  }
 
+
+ const NULL_BYTES = ['\\0', '\\000', '\\x00', '\\z', '\\u0000', '%00'];
+
+ /***
+  * A class that represents a workspace for an AutoGPT agent
+  */
  export class Workspace {
+
   private _root: string;
   private _restricted: boolean;
 
@@ -72,18 +81,32 @@ function isSubDir (parent: string, dir: string) {
    * Resolve the relative path within the given root if possible.
    */
   private static sanitizePath (relativePath: string, root: string | undefined = undefined, restrictToRoot: boolean = true) {
+    for (const nullByte of NULL_BYTES) {
+      if (relativePath.includes(nullByte) || (root !== undefined && root.includes(nullByte))) {
+        throw new AutoGPTError('embedded null byte');
+      }
+    }
+    
     if (!root) {
       return path.resolve(relativePath);
     }
 
+    Logger.debug(`Resolving path '${relativePath}' in workspace '${root}'`);
+
+    root = path.resolve(root);
+
+    Logger.debug(`Resolved root as '${root}'`);
+
     if (path.isAbsolute(relativePath)) {
-      throw new Error(`Attempted to access absolute path '${relativePath}' in workspace '${root}'`);
+      throw new AutoGPTError(`Attempted to access absolute path '${relativePath}' in workspace '${root}'`);
     }
 
     const fullPath = path.resolve(path.join(root, relativePath));
 
+    Logger.debug(`Joined paths as '${fullPath}'`);
+
     if (restrictToRoot && !isRelativeTo(fullPath, root)) {
-      throw new Error(`Attempted to access absolute path '${fullPath}' in workspace '${root}'`);
+      throw new AutoGPTError(`Attempted to access absolute path '${fullPath}' in workspace '${root}'`);
     }
 
     return fullPath;

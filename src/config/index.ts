@@ -4,6 +4,7 @@ import { XGPTPlugin } from '../plugins/plugin.template';
 import { Model } from '../openai';
 import { SUPPORTED_MEMORIES } from '../memory';
 import fs from 'fs';
+import { AutoGPTError } from '../utils';
 
 export interface ConfigOptions {
   continuous?: boolean;
@@ -123,9 +124,9 @@ export class Config {
    */
   public static checkOpenAIAPIKey () {
     if (!this._instance?.openAIAPIKey) {
-      // Logger.error('Please set your OpenAI API key in .env or as environment variable.');
-      // Logger.error('You can get your key from https://platform.openai.com/account/api-keys');
-      throw new Error('OpenAPI key not found');
+      Logger.print(Color.red, 'Please set your OpenAI API key in .env or as environment variable.');
+      Logger.print('You can get your key from https://platform.openai.com/account/api-keys');
+      throw new AutoGPTError('OpenAPI key not found', () => process.exit(1));
     }
   }
 

@@ -1,5 +1,5 @@
 import { Config, ConfigOptions } from './config';
-import { Color, Logger } from './logger';
+import { Color, LogLevel, Logger } from './logger';
 import argparse from 'argparse';
 import { constructMainAIConfig } from './prompts';
 import { Agent } from './agent/agent';
@@ -19,6 +19,8 @@ import { Memory } from './memory/base';
 import readline from 'readline/promises';
 import { sayText } from './speech';
 import { getMemory } from './memory';
+import { AutoGPTError } from './utils';
+import { prototype } from 'events';
 
 
 const parser = new argparse.ArgumentParser({});
@@ -44,17 +46,15 @@ export async function main () {
     const parsedArgs: ConfigOptions = parser.parse_args();
     
     await Logger.init();
+    Logger.level = parsedArgs.debug ? LogLevel.DEBUG : LogLevel.INFO;
     Config.init(parsedArgs);
-    await getMemory(true);
 
-    // Logger.debug('Logger initialized...', 'TITRE', Color.red);
-    // Logger.warn('this is a warning...', 'TITRE', Color.yellow);
-    // Logger.error('this is an error', 'NON');
-    // Logger.type('This is a sentence', 'TITRE', Color.yellow);
 
-    AgentManager.init();
     Config.checkOpenAIAPIKey();
     OpenAI.init();
+    const memory = await getMemory(true);
+
+    AgentManager.init();
     await Python.init();
 
     const registry = new CommandRegistry();
@@ -154,6 +154,8 @@ export async function main () {
       },
     }));
 
+    const workspacePath = Workspace.makeWorkspace(workspaceDirectory);
+
     const aiConfig = await constructMainAIConfig();
 
     aiConfig.commandRegistry = registry;
@@ -163,7 +165,6 @@ export async function main () {
 
     const triggeringPrompt = 'Determine which next command to use, and respond using the format specified above:';
 
-    const workspacePath = Workspace.makeWorkspace(workspaceDirectory);
 
     Config.workspacePath = workspacePath;
 
@@ -186,24 +187,36 @@ export async function main () {
     });
 
     agent.startInteractionLoop();
+
+    shutdown(0);
   }
   catch (err: any) {
-    console.error('ERROR');
-    console.error(err);
-  }
-  finally {
-    await shutdown();
+    if (err instanceof AutoGPTError) {
+      Logger.print(Color.red, 'AutoGPTError: '+ err.message);
+      if (err.callback) {
+        shutdown(err.callback);
+      }
+      else {
+        shutdown(1);
+      }
+    }
+    else {
+      Logger.print(Color.red, 'Error: '+ err.message);
+      shutdown(1)
+    }
   }
 }
 
-async function shutdown() {
-  // await Memory.shutdown();
+async function shutdown(value: number): Promise<void>;
+async function shutdown(value: () => void): Promise<void>;
+async function shutdown(value: number | (() => void)): Promise<void> {
+  await Logger.shutdown();
+  await Memory.shutdown();
   
-  /*
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-  console.log('\n\n');
-  const exit = await rl.question('Press any key to exit...');
-
-  process.exit(0);
-  */
+  if (typeof value === 'number') {
+    process.exit(value);
+  }
+  else {
+    value();
+  }
 }

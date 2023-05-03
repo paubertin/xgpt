@@ -29,7 +29,9 @@ export abstract class Memory {
   }
 
   public static async shutdown () {
-    await this.instance._shutdown();
+    if (this._initialized) {
+      await this.instance._shutdown();
+    }
   }
 
   public static async add (data: string): Promise<any> { return await this.instance._add(data); }
