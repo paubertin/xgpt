@@ -28,7 +28,7 @@ export function getNewlyTrimmedMessages(fullMessageHistory: Message[], currentCo
   };
 }
 
-export async function updateRunningSummary (currentMemory: string | Message[], events: Message[]) {
+export async function updateRunningSummary (currentMemory: Message, events: Message[]) {
   const newEvents = [...events];
   let eventsToKeep: Message[] | string = [];
   for (const event of newEvents) {
@@ -57,7 +57,7 @@ You will receive the current summary and the your latest actions. Combine them, 
 
 Summary So Far:
 """
-${currentMemory}
+${currentMemory.content}
 """
 
 Latest Development:
@@ -72,11 +72,11 @@ ${eventsToKeep}
     }
   ];
 
-  currentMemory = await createChatCompletion(messages, Config.fastLLMModel);
+  const result = await createChatCompletion(messages, Config.fastLLMModel);
 
   const messageToReturn: Message = {
     role: 'system',
-    content: `This reminds you of these events from your past: \n${currentMemory}`,
+    content: `This reminds you of these events from your past: \n${result}`,
   };
 
   return messageToReturn;

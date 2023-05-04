@@ -89,7 +89,7 @@ export class Logger {
             process.stdout.write(message[0]);
             message = message.slice(1);
 
-            const delay = 10 + (1 - Math.random()) * 50;
+            const delay = 5 + (1 - Math.random()) * 25;
             const until = (new Date(new Date().getTime() + delay )).getTime();
             while (Date.now() < until) {}
           }

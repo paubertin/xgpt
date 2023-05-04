@@ -54,3 +54,11 @@ export async function countMessageTokens (messages: Message[], model: Model = 'g
   return numTokens;
   */
 }
+
+/**
+ * Returns the number of tokens in a text string.
+ */
+export async function countStringTokens (str: string, model: Model) {
+  return await Python.countStringTokens(str, model);
+
+}

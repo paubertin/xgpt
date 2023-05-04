@@ -86,8 +86,7 @@ export async function constructMainAIConfig () {
     config.save(Config.aiSettingsFile);
   }
 
-  const apiManager = new ApiManager();
-  apiManager.totalBudget = config.apiBudget;
+  ApiManager.totalBudget = config.apiBudget;
 
   Logger.type(config.aiName, Color.cyan, ' has been created with the following details:');
   Logger.type('  Name: ', Color.green, config.aiName);
