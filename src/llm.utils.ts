@@ -6,7 +6,7 @@ import { sleepAsync } from "./sleep.js";
 
 export async function callAIFunction (func: string, args: any[], desc: string, model: Model = Config.smartLLMModel) {
   args = args.map((arg) => arg !== null && arg !== undefined ? `${String(arg)}` : 'None');
-  const argsString = args.join(', ');
+  const argsString = args.map((a) => JSON.stringify(a)).join(', ');
   const messages: Message[] = [
     {
       role: 'system',
@@ -25,6 +25,8 @@ Only respond with your \`return\` value.`
       content: argsString,
     }
   ];
+  console.error('messages', messages);
+
   return await createChatCompletion(messages, model, 0);
 }
 /**

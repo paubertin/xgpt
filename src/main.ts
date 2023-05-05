@@ -8,11 +8,15 @@ import { CommandRegistry } from './commands/registry.js';
 import { Workspace } from './workspace.js';
 import path from 'path';
 import fs from 'fs';
+import { shutdown } from './app.js';
 import { Python } from './spacy/index.js';
 import { Memory } from './memory/base.js';
 import { getMemory } from './memory/index.js';
 import { AutoGPTError } from './utils.js';
 import { commands } from './commands/index.js';
+
+import puppeteer from 'puppeteer';
+import playwright from 'playwright';
 
 import { Spinner } from './log/spinner.js';
 
@@ -32,6 +36,41 @@ parser.add_argument('--allow-downloads', { action: 'store_true', help: 'Dangerou
 
 export async function main () {
   try {
+
+    /*
+    const browser = await playwright.chromium.launch({ headless: true });
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    await page.goto('https://en.wikipedia.org/wiki/Chape', {
+      waitUntil: 'domcontentloaded',
+    });
+    const pageTitle = await page.title();
+    console.log('title', pageTitle);
+
+    page.content()
+    const pagetext = await page.textContent('body');
+    console.log('pagetext', pagetext);
+    */
+
+    const browser = await puppeteer.launch({
+      headless: false,
+      ignoreHTTPSErrors: true,
+    });
+
+    const page = await browser.newPage();
+    await page.goto('https://en.wikipedia.org/wiki/Chape', {
+      waitUntil: 'domcontentloaded',
+    });
+    const hrefs = await page.$$eval('a', (aa) => aa.map((a) => a.href));
+    console.log('hrefs', hrefs);
+    const extractedText = await page.$eval('*', (el) => el.textContent);
+    const body = await page.$('body');
+    const innerHTML = await page.evaluate((b) => {
+      return b?.innerHTML;
+    }, body);
+    console.log('innerHTML', innerHTML);
+    await page.close();
+    await browser.close();
     
     const parsedArgs: ConfigOptions = parser.parse_args();
     
@@ -93,7 +132,7 @@ export async function main () {
       workspaceDirectory,
     });
   
-    agent.startInteractionLoop();
+    await agent.startInteractionLoop();
   
     shutdown(0);
 
@@ -111,21 +150,7 @@ export async function main () {
     }
     else {
       Logger.print(Color.red, 'Error: '+ err.message);
-      shutdown(1)
+      shutdown(1);
     }
-  }
-}
-
-async function shutdown(value: number): Promise<void>;
-async function shutdown(value: () => void): Promise<void>;
-async function shutdown(value: number | (() => void)): Promise<void> {
-  await Logger.shutdown();
-  await Memory.shutdown();
-  
-  if (typeof value === 'number') {
-    process.exit(value);
-  }
-  else {
-    value();
   }
 }

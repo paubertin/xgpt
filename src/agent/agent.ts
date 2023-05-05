@@ -1,4 +1,4 @@
-import { executeCommand, getCommand } from "../app.js";
+import { CommandArgs, CommandResult, executeCommand, getCommand } from "../app.js";
 import { chatWithAI, createChatMessage } from "../chat.js";
 import { CommandRegistry } from "../commands/registry.js";
 import { Config } from "../config/index.js";
@@ -93,27 +93,26 @@ export class Agent {
     this.workspace = new Workspace(opts.workspaceDirectory, Config.restrictToWorkspace);
   }
 
-  private _resolvePathlikeCommandArgs (commandArgs: Record<string, any>) {
-    if ('directory' in commandArgs && ['', '/'].includes(commandArgs.directory)) {
-      commandArgs.directory = this.workspace.root;
+  private _resolvePathlikeCommandArgs (command: CommandResult) {
+    if (['', '/'].includes(command.args.get('directory'))) {
+      command.args.set('directory', this.workspace.root);
     }
     else {
       ['fileName', 'directory', 'clonePath'].forEach((pathLike) => {
-        if (pathLike in commandArgs) {
-          commandArgs[pathLike] = this.workspace.getPath(commandArgs[pathLike]);
+        if (command.args.get(pathLike)) {
+          command.args.set(pathLike, this.workspace.getPath(command.args[pathLike]));
         }
       });
     }
-    return commandArgs;
+    return command;
   }
 
   public async startInteractionLoop() {
     this.cycleCount = 0;
     let userInput: string = '';
-    let commandName;
-    let args;
-
-    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    let command = new CommandResult();
+    // let commandName: string = '';
+    // let args: CommandArgs = new CommandArgs();
 
     while (true) {
       this.cycleCount += 1;
@@ -132,10 +131,10 @@ export class Agent {
         json = validateJSON(json);
         try {
           printAssistantThoughts(this.aiName, json);
-          const commandResult = getCommand(json);
-          commandName = commandResult.commandName;
-          args = commandResult.args;
-          args = this._resolvePathlikeCommandArgs(args);
+          command = getCommand(json);
+          // commandName = commandResult.commandName;
+          // args = commandResult.args;
+          this._resolvePathlikeCommandArgs(command);
         }
         catch (err: unknown) {
           Logger.error('Error: \n', JSON.stringify(err));
@@ -144,7 +143,7 @@ export class Agent {
 
       if (!Config.continuousMode && this.nextActionCount === 0) {
         this.userInput = '';
-        Logger.type('NEXT ACTION', Color.cyan, `COMMAND = ${Color.cyan}${commandName}${Color.reset}  ARGUMENTS = ${Color.cyan}${args}${Color.reset}`);
+        Logger.type('NEXT ACTION', Color.cyan, `COMMAND = ${Color.cyan}${command.name}${Color.reset}  ARGUMENTS = ${Color.cyan}${command.args.toString()}${Color.reset}`);
         Logger.info(`Enter ${Config.authorizeKey} to authorise command, '${Config.authorizeKey} -N' to run N continuous commands, '${Config.exitKey}' to exit program, or enter feedback for ${this.aiName}...`);
         while (true) {
           const input = await cleanInput('Input:', Color.magenta);
@@ -186,7 +185,7 @@ export class Agent {
           }
           else {
             userInput = input;
-            commandName = 'humanFeedback';
+            command.name = 'humanFeedback';
             break;
           }
         }
@@ -199,26 +198,25 @@ export class Agent {
         }
       }
       else {
-        Logger.type('NEXT ACTION', Color.cyan, `COMMAND = ${Color.cyan}${commandName}${Color.reset}  ARGUMENTS = ${Color.cyan}${args}${Color.reset}`);
+        Logger.type('NEXT ACTION', Color.cyan, `COMMAND = ${Color.cyan}${command.name}${Color.reset}  ARGUMENTS = ${Color.cyan}${command.args.toString()}${Color.reset}`);
       }
 
       let result: string;
-      if (commandName && commandName.toLowerCase().startsWith('error')) {
-        result = `Command ${commandName} threw the following error: ${JSON.stringify(args)}`;
+      if (command.name.toLowerCase().startsWith('error')) {
+        result = `Command ${command.name} threw the following error: ${command.args.toString()}`;
       }
-      else if (commandName === 'humanFeedback') {
+      else if (command.name === 'humanFeedback') {
         result = `Human feedback: ${userInput}`;
       }
       else {
-        const commandResult = await executeCommand(this.commandRegistry, commandName, args, this.config.promptGenerator);
-
-        result = `Command ${commandName} returned: ${commandResult}`;
+        const commandResult = await executeCommand(this.commandRegistry, command, this.config.promptGenerator);
+        result = `Command ${command.name} returned: ${commandResult}`;
 
         const resultTokenLength = await countStringTokens(commandResult, Config.fastLLMModel);
         const memoryTokenLength = await countStringTokens(this.summaryMemory.content, Config.fastLLMModel);
 
         if (resultTokenLength + memoryTokenLength + 600 > Config.fastTokenLimit) {
-          result = `Failure: command ${commandName} returned too much output. Do not execute this command again with the same arguments.`;
+          result = `Failure: command ${command.name} returned too much output. Do not execute this command again with the same arguments.`;
         }
 
         if (this.nextActionCount > 0) {
@@ -290,7 +288,6 @@ async function fixJsonUsingMultipleTechniques (jsonString: string) {
   }
 
   Logger.error('Error: The following AI output couldn\'t be parsed as JSON:\n', jsonString);
-  console.log('json', json);
 
   return {};
 }
@@ -300,7 +297,12 @@ async function fixJsonUsingMultipleTechniques (jsonString: string) {
  */
 async function fixAndParseJson (jsonString: string, tryToFixWithGpt: boolean = true) {
   try {
-    return JSON.parse(jsonString.replaceAll('\t', ''));
+    // Escaping newlines in the string field values
+    const regex = /"(?:[^"\\]|\\[^n])*?"/g;
+    const escapedString = jsonString.replace(regex, (match) =>
+      match.replace(/\n/g, "\\\\n")
+    );
+    return JSON.parse(escapedString);
   }
   catch { }
 
@@ -309,6 +311,7 @@ async function fixAndParseJson (jsonString: string, tryToFixWithGpt: boolean = t
   }
   catch { }
 
+  let maybeFixedJson: string;
   try {
     const braceIndex = jsonString.indexOf('{');
     let maybeFixedJson = jsonString.slice(braceIndex);
@@ -356,9 +359,9 @@ The function also escapes any double quotes within JSON string values to ensure 
 If the JSON string contains any NaN values, they are replaced with null before being parsed.
 This function is brilliant at guessing when the format is incorrect.`;
 
-  if (jsonString[0] !== "`") {
-    jsonString = "```json\n" + jsonString + "\n```";
-  }
+  // if (jsonString[0] !== "`") {
+  //   jsonString = "```json\n" + jsonString + "\n```";
+  // }
   const resultString = await callAIFunction(
     functionString,
     args,

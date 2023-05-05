@@ -35,13 +35,17 @@ export const JSON_SCHEMA = `
 
 export class PromptGenerator {
   private constraints: string[] = [];
-  private commands: Command[] = [];
+  private _commands: Command[] = [];
   private resources: string[] = [];
   private performanceEvaluation: string[] = [];
   public goals: string[] = [];
   public commandRegistry?: CommandRegistry;
   public name: string = 'Bob';
   public role: string = 'AI';
+
+  public get commands () {
+    return this._commands;
+  }
 
   /**
    * Add a constraint to the constraints list
@@ -54,7 +58,7 @@ export class PromptGenerator {
    * Add a command to the commands list with a label, name, and optional arguments.
    */
   public addCommand (command: Command) {
-    this.commands.push(command);
+    this._commands.push(command);
   }
 
   /**
@@ -112,7 +116,7 @@ export class PromptGenerator {
   public generatePromptString () {
     return `Constraints:\n${this.generateNumberedList(this.constraints)}\n\n`
       + 'Commands:\n'
-      + `${this.generateNumberedList(this.commands, 'command')}\n\n`
+      + `${this.generateNumberedList(this._commands, 'command')}\n\n`
       + `Resources:\n${this.generateNumberedList(this.resources)}\n\n`
       + 'Performance Evaluation:\n'
       + `${this.generateNumberedList(this.performanceEvaluation)}\n\n`

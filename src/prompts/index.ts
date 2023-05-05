@@ -29,7 +29,7 @@ export function buildDefaultPromptGenerator () {
   promptGenerator.addConstraint('Exclusively use the commands listed in double quotes e.g. "commandName"');
 
   const commands: Command[] = [
-    new Command('doNothing', 'Do Nothing'),
+    // new Command('doNothing', 'Do Nothing'),
     new Command('taskComplete', 'Task Complete (Shutdown)', undefined, { reason: 'reason' }),
   ];
 

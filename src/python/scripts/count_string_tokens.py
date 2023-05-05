@@ -1,3 +1,5 @@
+import json
+import sys
 import tiktoken
 
 def count_string_tokens(string: str, model_name: str) -> int:
@@ -13,3 +15,11 @@ def count_string_tokens(string: str, model_name: str) -> int:
     """
     encoding = tiktoken.encoding_for_model(model_name)
     return len(encoding.encode(string))
+
+
+raw = sys.stdin.readline()
+args = json.loads(raw.strip())
+str = args["str"]
+model = args["model"]
+count = count_string_tokens(str, model)
+print(count)

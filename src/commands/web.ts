@@ -1,4 +1,5 @@
 import JSSoup from 'jssoup';
+const Soup = JSSoup.default;
 import fs from 'fs';
 
 import { Builder, By, Key, ThenableWebDriver, until } from 'selenium-webdriver';
@@ -142,14 +143,18 @@ export async function scrapeText (url: string) {
     return 'Could not get response';
   }
 
-  const soup = new JSSoup(await response.text());
+  const soup = new Soup(await response.text());
 
   const text = soup.getText();
   const lines = text.split('\n').map((line) => line.trim());
 }
 
+/**
+ * Browse a website and return the answer and links to the user
+ */
 export async function browseWebsite (url: string, question: string) {
   const { driver, text } = await scrapeTextWithSelenium(url);
+  console.log('text', text);
   await addHeader(driver);
   const summaryText = await summarizeText(url, text, question, driver);
   let links = await scrapeLinksWithSelenium(driver, url);
@@ -169,6 +174,9 @@ export async function browseWebsite (url: string, question: string) {
   }
 }
 
+/**
+ * Scrape text from a website using selenium
+ */
 export async function scrapeTextWithSelenium (url: string) {
   const options = new ChromeOptions();
   options.addArguments('user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.5615.49 Safari/537.36');
@@ -186,7 +194,7 @@ export async function scrapeTextWithSelenium (url: string) {
   const pageSource = await driver.executeScript<string>('return document.body.outerHTML');
   // console.log('pageSource', pageSource);
 
-  const soup = new JSSoup(pageSource);
+  const soup = new Soup(pageSource);
   soup.findAll('script').forEach((script) => script.extract());
   soup.findAll('style').forEach((style) => style.extract());
 
@@ -209,7 +217,7 @@ export async function scrapeTextWithSelenium (url: string) {
 
 export async function scrapeLinksWithSelenium (driver: ThenableWebDriver, url: string) {
   const pageSource = await driver.getPageSource();
-  const soup = new JSSoup(pageSource);
+  const soup = new Soup(pageSource);
   soup.findAll('script').forEach((script) => script.extract());
   soup.findAll('style').forEach((style) => style.extract());
 

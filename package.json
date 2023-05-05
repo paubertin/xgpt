@@ -37,6 +37,8 @@
     "lodash": "^4.17.21",
     "log-update": "^5.0.1",
     "openai": "^3.2.1",
+    "playwright": "^1.33.0",
+    "puppeteer": "^20.1.0",
     "selenium-webdriver": "^4.9.0",
     "spacy": "^0.0.4",
     "spacy-nlp": "^1.0.11",

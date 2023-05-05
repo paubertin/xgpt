@@ -82,16 +82,19 @@ export class Logger {
               ? `${titleColor}${title}${Color.reset}`
               : title
             : '';
+          let minSpeed = 50;
+          let maxSpeed = 10;
           if (titleString) {
             process.stdout.write(titleString + ' ');
           }
           while (message.length > 0) {
             process.stdout.write(message[0]);
             message = message.slice(1);
-
-            const delay = 5 + (1 - Math.random()) * 25;
+            const delay = maxSpeed + (1 - Math.random()) * minSpeed;
             const until = (new Date(new Date().getTime() + delay )).getTime();
             while (Date.now() < until) {}
+            minSpeed *= 0.95;
+            maxSpeed *= 0.95;
           }
           return '';
         }) }),
