@@ -1,8 +1,47 @@
 import { PythonShell } from "python-shell";
 
 import { Message, Model } from "../openai.js";
+import { Config } from "../config/index.js";
 
 export class Python {
+
+  public static async parseSentences (text: string) {
+
+    return new Promise<string[]>(async (resolve, reject) => {
+      const shell = new PythonShell('./src/python/scripts/spacy_parse_sentences.py');
+      shell.send(JSON.stringify({
+        text,
+        languageModel: Config.browseSpacyLanguageModel,
+      }));
+      shell.on('message', (...args: any[]) => {
+        if (args.length !== 1) {
+          reject('Incorrect value');
+        }
+        shell.end((err, exitCode, exitSignal) => {
+          /*
+          console.log('END SHELL');
+          console.log('err', err);
+          console.log('exitCode', exitCode);
+          console.log('exitSignal', exitSignal);
+          */
+        });
+        const sentencesString: string = args[0];
+        resolve(sentencesString.split('$DELIMITER$'));
+      });
+      shell.on('error', (err) => {
+        // console.error('error', err);
+        reject(err);
+      });
+      shell.on('pythonError', (err) => {
+        // console.error('python error', err);
+        reject(err);
+      });
+      shell.on('close', () => {
+        // console.log('closing shell...');
+      });
+    });
+
+  }
 
   public static async countMessageTokens(messages: Message[], model: Model = 'gpt-3.5-turbo-0301') {
 

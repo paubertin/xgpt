@@ -11,7 +11,7 @@ export class CommandArgs {
   }
 
   public toString() {
-    return Object.entries(this._args).map(([ key, value ]) => `${key} = ${value}`).join(',');
+    return Object.entries(this._args).map(([ key, value ]) => `${key} = ${value}`).join(', ');
   }
 
   public get (key: string) {
@@ -62,7 +62,6 @@ function mapCommandSynonyms (commandName: string) {
 export async function executeCommand (commandRegistry: CommandRegistry, commandResult: CommandResult, prompt: PromptGenerator ) {
   try {
     const command = commandRegistry.getCommand(commandResult.name);
-    console.log('command found: ', command);
     if (command) {
       return await command.call(...commandResult.args.toArray());
     }

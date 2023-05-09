@@ -1,6 +1,10 @@
 import fs from 'fs';
 import path from 'path';
 import { Config } from '../config/index.js';
+import { Color } from '../logs.js';
+import { Spinner } from '../log/spinner.js';
+import { finished } from 'stream/promises';
+import { Readable } from 'stream';
 
 async function checkDuplicateOperation (op: string, fileName: string) {
   const logContent = await readFile(Config.fileLoggerPath);
@@ -80,4 +84,24 @@ export async function appendToFile (fileName: string, content: string, shouldLog
   catch (err: any) {
     return `Error: ${err}`;
   }
+}
+
+export async function downloadFile (url: string, fileName: string) {
+  try {
+    const directory = path.dirname(fileName);
+    await fs.promises.mkdir(directory, { recursive: true });
+    const message = `${Color.yellow}Downloading the file from ${Color.cyan}${url}${Color.reset}`;
+    await Spinner.while(_downloadFile(url, fileName), message);
+    return 'File downloaded successfully.';
+  }
+  catch (err: unknown) {
+    return `Error: ${err}`;
+  }
+}
+
+async function _downloadFile (url: string, fileName: string) {
+  const res = await fetch(url);
+  const body = res.body;
+  const fileStream = fs.createWriteStream(fileName, { flags: 'wx' });
+  await finished(Readable.fromWeb(res.body as any).pipe(fileStream));
 }

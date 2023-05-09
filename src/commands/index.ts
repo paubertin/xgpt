@@ -1,6 +1,6 @@
 import { Config } from '../config/index.js';
 import { command } from './command.js';
-import { appendToFile, createDir, readFile, searchFiles, writeFile } from './files.js';
+import { appendToFile, createDir, downloadFile, readFile, searchFiles, writeFile } from './files.js';
 import { googleSearch } from './googleSearch.js';
 import { browseWebsite } from './web.js';
 import { deleteAgent, listAgents, messageAgent, startAgent } from './agents.js'
@@ -55,6 +55,15 @@ export const commands = () => [
     description: 'Search files in a directory',
     args: {
       directory: 'directory',
+    },
+  }),
+
+  command(downloadFile, {
+    name: 'downloadFile',
+    description: 'Download a file',
+    args: {
+      url: 'url',
+      fileName: 'path where you want to save the file locally',
     },
   }),
 

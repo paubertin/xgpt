@@ -33,6 +33,7 @@ export class Config {
 
   private static _init (options?: ConfigOptions) {
     this._debugMode = false;
+    this._smartLinksParsing = false;
     this._continuousMode = false;
     this._speakMode = false;
     this._skipReprompt = false;
@@ -170,6 +171,7 @@ export class Config {
   }
 
   public static get debugMode () { this.checkInitialized(); return this._debugMode; }
+  public static get smartLinksParsing () { this.checkInitialized(); return this._smartLinksParsing; }
   public static get continuousMode () { this.checkInitialized(); return this._continuousMode; }
   public static get continuousLimit () { this.checkInitialized(); return this._continuousLimit; }
   public static get speakMode () { this.checkInitialized(); return this._speakMode; }
@@ -250,6 +252,7 @@ export class Config {
   private static _initialized: boolean = false;
 
   private static _debugMode: boolean;
+  private static _smartLinksParsing: boolean;
   private static _continuousMode: boolean;
   private static _continuousLimit: number;
   private static _speakMode: boolean;

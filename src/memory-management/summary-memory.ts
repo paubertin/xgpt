@@ -1,3 +1,4 @@
+import { fixAndParseJson } from "../agent/agent.js";
 import { Config } from "../config/index.js";
 import { createChatCompletion } from "../llm.utils.js";
 import { Message } from "../openai.js";
@@ -29,12 +30,14 @@ export function getNewlyTrimmedMessages(fullMessageHistory: Message[], currentCo
 }
 
 export async function updateRunningSummary (currentMemory: Message, events: Message[]) {
+  console.log('updateRunningSummary');
   const newEvents = [...events];
   let eventsToKeep: Message[] | string = [];
   for (const event of newEvents) {
+    console.log('event', event);
     if (event.role === 'assistant') {
       (event as any).role = 'you';
-      const content = JSON.parse(event.content);
+      const content = await fixAndParseJson(event.content);
       delete content.thoughts;
       event.content = JSON.stringify(content);
     }

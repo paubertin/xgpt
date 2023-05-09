@@ -51,7 +51,6 @@ const validate = (new ajv.default()).compile({
 });
 
 interface AgentOptions {
-  aiName: string;
   fullMessageHistory: Message[];
   nextActionCount: number;
   commandRegistry: CommandRegistry;
@@ -83,7 +82,7 @@ export class Agent {
   public logCycleHandler = new LogCycleHandler();
 
   public constructor (opts: AgentOptions) {
-    this.aiName = opts.aiName;
+    this.aiName = opts.config.aiName;
     this.fullMessageHistory = opts.fullMessageHistory;
     this.nextActionCount = opts.nextActionCount;
     this.commandRegistry = opts.commandRegistry;
@@ -100,7 +99,7 @@ export class Agent {
     else {
       ['fileName', 'directory', 'clonePath'].forEach((pathLike) => {
         if (command.args.get(pathLike)) {
-          command.args.set(pathLike, this.workspace.getPath(command.args[pathLike]));
+          command.args.set(pathLike, this.workspace.getPath(command.args.get(pathLike)));
         }
       });
     }
@@ -137,7 +136,8 @@ export class Agent {
           this._resolvePathlikeCommandArgs(command);
         }
         catch (err: unknown) {
-          Logger.error('Error: \n', JSON.stringify(err));
+          console.error(err);
+          Logger.error(JSON.stringify(err), 'Error: \n');
         }
       } 
 
@@ -256,7 +256,7 @@ export class Agent {
 /**
  * Fix the given JSON string to make it parseable and fully compliant with two techniques.
  */
-async function fixJsonUsingMultipleTechniques (jsonString: string) {
+export async function fixJsonUsingMultipleTechniques (jsonString: string) {
   jsonString = jsonString.trim();
   if (jsonString.startsWith('```json')) {
     jsonString = jsonString.slice(7);
@@ -287,7 +287,7 @@ async function fixJsonUsingMultipleTechniques (jsonString: string) {
     return json;
   }
 
-  Logger.error('Error: The following AI output couldn\'t be parsed as JSON:\n', jsonString);
+  Logger.error(jsonString, 'Error: The following AI output couldn\'t be parsed as JSON:\n');
 
   return {};
 }
@@ -295,7 +295,7 @@ async function fixJsonUsingMultipleTechniques (jsonString: string) {
 /**
  * Fix and parse JSON string
  */
-async function fixAndParseJson (jsonString: string, tryToFixWithGpt: boolean = true) {
+export async function fixAndParseJson (jsonString: string, tryToFixWithGpt: boolean = true) {
   try {
     // Escaping newlines in the string field values
     const regex = /"(?:[^"\\]|\\[^n])*?"/g;
@@ -311,7 +311,6 @@ async function fixAndParseJson (jsonString: string, tryToFixWithGpt: boolean = t
   }
   catch { }
 
-  let maybeFixedJson: string;
   try {
     const braceIndex = jsonString.indexOf('{');
     let maybeFixedJson = jsonString.slice(braceIndex);

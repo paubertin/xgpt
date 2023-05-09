@@ -1,12 +1,11 @@
 import { ThenableWebDriver } from 'selenium-webdriver';
-import { Message } from '../openai.js';
+import { Message, Model } from '../openai.js';
 import { Config } from '../config/index.js';
-import { Python } from '../spacy/index.js';
 import { countMessageTokens } from '../token-counter.js';
-import { TiktokenModel } from '@dqbd/tiktoken';
 import { createChatCompletion } from '../llm.utils.js';
 import { Memory } from '../memory/base.js';
 import { Logger } from '../logs.js';
+import { Python } from '../python/index.js';
 
 async function scrollToPercentage (driver: ThenableWebDriver, ratio: number) {
   try {
@@ -28,6 +27,9 @@ function createMessage (chunk: string, question: string): Message {
   };
 }
 
+/**
+ * Split text into chunks of a maximum length
+ */
 async function splitText (text: string, maxLength: number = Config.browseChunkMaxLength, model = Config.fastLLMModel, question: string = '') {
   const flattenedParagraphs = text.split('\n').join(' ');
   const sentences = await Python.parseSentences(flattenedParagraphs);
@@ -38,21 +40,18 @@ async function splitText (text: string, maxLength: number = Config.browseChunkMa
   let i = 0;
   for (const sentence of sentences) {
     i++;
-    // console.log(`Processing sentence ${i}/${sentences.length}, current length: ${current.length}`);
     const messageWithAdditionalSentence = [
       createMessage(`${current ? current + ' ' : ''}${sentence}`, question),
     ];
 
     try {
       let expectedTokenUsage = await tokenUsageOfChunk(messageWithAdditionalSentence, model) + 1;
-      // console.log(`Expected tokens usage: ${expectedTokenUsage} (max = ${maxLength})`);
 
       if (expectedTokenUsage <= maxLength) {
         // chunks.push(sentence);
         current = (current ? (current + ' ') : '') + sentence;
       }
       else {
-        // console.log('pushing chunk');
         chunks.push(current);
         current = '';
         const messageThisSentenceOnly = [
@@ -66,7 +65,6 @@ async function splitText (text: string, maxLength: number = Config.browseChunkMa
       }
     }
     catch (err: any) {
-      // console.error('Error splitting text...', err);
       throw new Error(err);
     }
   }
@@ -111,7 +109,7 @@ function* splitTextGenerator (sentences: string[], maxLength: number = Config.br
 }
 */
 
-async function tokenUsageOfChunk (messages: Message[], model: TiktokenModel) {
+async function tokenUsageOfChunk (messages: Message[], model: Model) {
   return countMessageTokens(messages, model);
 }
 
@@ -122,7 +120,7 @@ export async function summarizeText (url: string, text: string, question: string
 
   const model = Config.fastLLMModel;
   const textLength = text.length;
-  console.log(`Text length: ${textLength} chartacters.`);
+  Logger.info(`Text length: ${textLength} characters.`);
 
   const summaries: string[] = [];
   // const flattenedParagraphs = text.split('\n').join(' ');
@@ -137,24 +135,23 @@ export async function summarizeText (url: string, text: string, question: string
     if (driver) {
       await scrollToPercentage(driver, scrollRatio * i);
     }
-    console.log(`Adding chunk ${i+1} / ${chunks.length} to memory`);
+    Logger.info(`Adding chunk ${i+1} / ${chunks.length} to memory`);
     let memoryToAdd = `Source: ${url}\n Raw content part#${i+1}: ${chunk}`;
     await Memory.add(memoryToAdd);
 
     const messages = [ createMessage(chunk, question) ];
     const tokens = await tokenUsageOfChunk(messages, model);
-    console.log(`Summarizing chunk ${i+1} / ${chunks.length} of length ${chunk.length} characters, or ${tokens} tokens`);
+    Logger.info(`Summarizing chunk ${i+1} / ${chunks.length} of length ${chunk.length} characters, or ${tokens} tokens`);
 
-    console.log('messages', messages);
     const summary = await createChatCompletion(messages, model);
     summaries.push(summary);
-    console.log(`Adding chunk ${i+1} summary to memory, of length ${summary.length} characters`);
+    Logger.info(`Adding chunk ${i+1} summary to memory, of length ${summary.length} characters`);
     memoryToAdd = `Source: ${url}\n Content summary part#${i+1}: ${summary}`;
     await Memory.add(memoryToAdd);
     i += 1;
   }
 
-  console.log(`Summarized ${chunks.length} chunks`);
+  Logger.info(`Summarized ${chunks.length} chunks`);
 
   const combinedSummary = summaries.join('\n');
   const messages = [ createMessage(combinedSummary, question) ];

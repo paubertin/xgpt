@@ -7,6 +7,9 @@ import chrome, { Options as ChromeOptions } from 'selenium-webdriver/chrome.js';
 import { summarizeText } from '../processing/text.js';
 import { extractHyperlinks, formatHyperlinks } from '../processing/html.js';
 import { Logger } from '../logs.js';
+import { Message } from '../openai.js';
+import { createChatCompletion } from '../llm.utils.js';
+import { Config } from '../config/index.js';
 
 const invalidProtocolRegex = /^([^\w]*)(javascript|data|vbscript)/im;
 const htmlEntitiesRegex = /&#(\w+)(^\w|;)?/g;
@@ -154,13 +157,60 @@ export async function scrapeText (url: string) {
  */
 export async function browseWebsite (url: string, question: string) {
   const { driver, text } = await scrapeTextWithSelenium(url);
-  console.log('text', text);
   await addHeader(driver);
   const summaryText = await summarizeText(url, text, question, driver);
   let links = await scrapeLinksWithSelenium(driver, url);
-
+  
+  let selectedLinks: string[] = [];
   if (links.length > 5) {
-    links = links.slice(0, 5);
+    if (Config.smartLinksParsing) {
+      let total = [ ...links ];
+      let i = 1;
+      while (total.length) {
+        console.log('iteration', i);
+        console.log('length remaining', total.length);
+        i++;
+        const part = total.slice(0, 50);
+        const message: Message = {
+          role: 'user',
+          content: `"""${part.map((link) => `- ${link}`).join('\n')}""" Using the above list of url links (short description and link), select at most 5 items that most likely answer or correspond to this question: "${question}" and to this summary: "${summaryText}".
+  If you think there are none, pick 5.
+  Only respond with a JSON array of string (short description and link), no explanations or any comment.`,
+        };
+        const link5 = await createChatCompletion([ message ], Config.fastLLMModel);
+        try {
+          selectedLinks.push(JSON.parse(link5));
+        }
+        catch {
+          Logger.info('Failed to parse json links... skipping this batch');
+        }
+        total.splice(0, 50);
+      }
+      if (selectedLinks.length) {
+        const message: Message = {
+          role: 'user',
+          content: `"""${selectedLinks.map((link) => `- ${link}`).join('\n')}""" Using the above list of url links (short description and link), select at most 5 items that most likely answer or correspond to this question: "${question}" and to this summary: "${summaryText}".
+  If you think there are none, pick 5.
+  Only respond with a JSON array of string (short description and link), no explanations or any comment.`,
+        };
+        const link5 = await createChatCompletion([ message ], Config.fastLLMModel);
+        try {
+          selectedLinks.push(JSON.parse(link5));
+        }
+        catch {
+          Logger.info('Failed to parse json links... skipping this batch');
+        }
+      }
+      if (selectedLinks.length === 0) {
+        selectedLinks = links.slice(0, 5);
+      }
+    }
+    else {
+      selectedLinks = links.slice(0, 5);
+    }
+  }
+  else {
+    selectedLinks = links;
   }
 
   await closeBrowser(driver);
@@ -168,10 +218,7 @@ export async function browseWebsite (url: string, question: string) {
   // Logger.log('summary', summaryText);
   // Logger.log('links', links);
 
-  return {
-    response: `Answer gathered from website: ${summaryText} \n \n Links: ${links}`,
-    driver,
-  }
+  return `Answer gathered from website: ${summaryText} \n\n Links: ${selectedLinks}`;
 }
 
 /**

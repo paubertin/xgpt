@@ -2,7 +2,7 @@ import fs from 'fs';
 import readline from 'readline/promises';
 import { Color, Logger } from './logs.js';
 
-const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+const rl = readline.createInterface({ input: process.stdin, output: process.stdout, terminal: false });
 
 export async function exists (path: string) {
   try {
@@ -28,6 +28,6 @@ export async function cleanInput (prompt: string, color?: Color) {
   if (color) {
     prompt = `${color}${prompt}${Color.reset}`;
   }
-  const answer = await rl.question(prompt);
+  const answer = await rl.question(prompt + ' ');
   return answer;
 }

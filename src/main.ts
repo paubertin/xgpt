@@ -2,14 +2,13 @@ import { Config, ConfigOptions } from './config/index.js';
 import { Color, LogLevel, Logger } from './logs.js';
 import argparse from 'argparse';
 import { DEFAULT_TRIGGERING_PROMPT, constructMainAIConfig } from './prompts/index.js';
-import { Agent } from './agent/agent.js';
+import { Agent, fixAndParseJson, fixJsonUsingMultipleTechniques } from './agent/agent.js';
 import { OpenAI } from './openai.js';
 import { CommandRegistry } from './commands/registry.js';
 import { Workspace } from './workspace.js';
 import path from 'path';
 import fs from 'fs';
 import { shutdown } from './app.js';
-import { Python } from './spacy/index.js';
 import { Memory } from './memory/base.js';
 import { getMemory } from './memory/index.js';
 import { AutoGPTError } from './utils.js';
@@ -19,6 +18,9 @@ import puppeteer from 'puppeteer';
 import playwright from 'playwright';
 
 import { Spinner } from './log/spinner.js';
+import { Python } from './python/index.js';
+import { tryParse } from './json-utils/index.js';
+import { downloadFile } from './commands/files.js';
 
 const parser = new argparse.ArgumentParser({});
 
@@ -36,7 +38,6 @@ parser.add_argument('--allow-downloads', { action: 'store_true', help: 'Dangerou
 
 export async function main () {
   try {
-
     /*
     const browser = await playwright.chromium.launch({ headless: true });
     const context = await browser.newContext();
@@ -50,7 +51,6 @@ export async function main () {
     page.content()
     const pagetext = await page.textContent('body');
     console.log('pagetext', pagetext);
-    */
 
     const browser = await puppeteer.launch({
       headless: false,
@@ -71,6 +71,7 @@ export async function main () {
     console.log('innerHTML', innerHTML);
     await page.close();
     await browser.close();
+    */
     
     const parsedArgs: ConfigOptions = parser.parse_args();
     
@@ -103,8 +104,6 @@ export async function main () {
       commandRegistry.register(command);
     });
 
-    const aiName: string = '';
-
     const aiConfig = await constructMainAIConfig();
     aiConfig.commandRegistry = commandRegistry;
   
@@ -122,7 +121,6 @@ export async function main () {
     }
 
     const agent = new Agent({
-      aiName,
       fullMessageHistory,
       nextActionCount,
       commandRegistry,
@@ -135,8 +133,6 @@ export async function main () {
     await agent.startInteractionLoop();
   
     shutdown(0);
-
-    await Python.init();
   }
   catch (err: any) {
     if (err instanceof AutoGPTError) {

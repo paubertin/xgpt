@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import winston from 'winston';
+import winston, { loggers } from 'winston';
 import { exists } from './utils.js';
 import { ResponseJSONFormat } from "./prompts/generator.js";
 
@@ -239,10 +239,10 @@ export class Logger {
 }
 
 export function printAssistantThoughts (name: string, json: ResponseJSONFormat) {
-  console.log(`${name.toUpperCase()} THOUGHTS: ${json.thoughts.text}`);
-  console.log(`REASONING: ${json.thoughts.reasoning}`);
+  Logger.type(`${name.toUpperCase()} THOUGHTS: `, Color.yellow, json.thoughts.text);
+  Logger.type('REASONING: ', Color.yellow, json.thoughts.reasoning);
   if (json.thoughts.plan) {
-    console.log('PLAN:');
+    Logger.type('PLAN: ', Color.yellow);
     const lines = json.thoughts.plan.split('\n').map((l) => l.trim());
     for (const line of lines) {
       const i = line.indexOf('- ');
@@ -250,8 +250,8 @@ export function printAssistantThoughts (name: string, json: ResponseJSONFormat) 
       if (i >= 0) {
         l = l.substring(i + 2);
       }
-      console.log(`- ${l.trim()}`);
+      Logger.type('- ', Color.green, l.trim());
     }
   }
-  console.log(`CRITICISM: ${json.thoughts.criticism}`);
+  Logger.type('CRITICISM: ', Color.yellow, json.thoughts.criticism);
 }
