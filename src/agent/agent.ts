@@ -27,11 +27,11 @@ const validate = (new ajv.default()).compile({
           "properties": {
               "text": {"type": "string"},
               "reasoning": {"type": "string"},
+              "progress": {"type": "string"},
               "plan": {"type": "string"},
-              "criticism": {"type": "string"},
-              "speak": {"type": "string"}
+              "criticism": {"type": "string"}
           },
-          "required": ["text", "reasoning", "plan", "criticism", "speak"],
+          "required": ["text", "reasoning", "plan", "criticism", "progress"],
           "additionalProperties": false
       },
       "command": {
@@ -237,7 +237,7 @@ export class Agent {
 
   private async getSelfFeedback (thoughts: any, model: Model) {
     const role = this.config.role;
-    const feedbackPrompt = `Below is a message from an AI agent with the role of ${role}. Please review the provided Thought, Reasoning, Plan, and Criticism. If these elements accurately contribute to the successful execution of the assumed role, respond with the letter 'Y' followed by a space, and then explain why it is effective. If the provided information is not suitable for achieving the role's objectives, please provide one or more sentences addressing the issue and suggesting a resolution.`
+    const feedbackPrompt = `Below is a message from an AI agent with the role of ${role}. Please review the provided Thought, Reasoning, Plan, Progress and Criticism. If these elements accurately contribute to the successful execution of the assumed role, respond with the letter 'Y' followed by a space, and then explain why it is effective. If the provided information is not suitable for achieving the role's objectives, please provide one or more sentences addressing the issue and suggesting a resolution.`
     const reasoning = thoughts.reasoning ?? '';
     const plan = thoughts.plan ?? '';
     const thought = thoughts.thoughts ?? '';

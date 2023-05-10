@@ -26,7 +26,11 @@ export function buildDefaultPromptGenerator () {
 
   promptGenerator.addConstraint('No user assistance');
 
+  promptGenerator.addConstraint('Check the progress of your goals');
   promptGenerator.addConstraint('Exclusively use the commands listed in double quotes e.g. "commandName"');
+  promptGenerator.addConstraint('Use the command responses in previous system messages to plan your next command to work towards your goals');
+  promptGenerator.addConstraint('Remember to use the output of previous command. If it contains useful information, save it to a file');
+  promptGenerator.addConstraint('Do not use commands to retrieve or analyze information you already have. Use your long term memory instead.');
 
   const commands: Command[] = [
     // new Command('doNothing', 'Do Nothing'),

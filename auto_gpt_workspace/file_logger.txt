@@ -1,2 +1,11 @@
 File Operation Logger
 
+write: /media/scal/Data/scal/dev/xgpt/auto_gpt_workspace/neuro-evolution/README.md
+write: /media/scal/Data/scal/dev/xgpt/auto_gpt_workspace/France_Real_Estate_Market/trends.txt
+append: /media/scal/Data/scal/dev/xgpt/auto_gpt_workspace/France_Real_Estate_Market/trends.txt
+write: /media/scal/Data/scal/dev/xgpt/auto_gpt_workspace/France_Real_Estate_Market/Real_Estate_Prices/real_estate_prices.txt
+append: /media/scal/Data/scal/dev/xgpt/auto_gpt_workspace/France_Real_Estate_Market/trends.txt
+write: /media/scal/Data/scal/dev/xgpt/auto_gpt_workspace/France_Real_Estate_Market/real_estate_prices.txt
+append: /media/scal/Data/scal/dev/xgpt/auto_gpt_workspace/France_Real_Estate_Market/trends.txt
+write: /media/scal/Data/scal/dev/xgpt/auto_gpt_workspace/LGCE_Research/LGCE_Mission_Statement.txt
+write: /media/scal/Data/scal/dev/xgpt/auto_gpt_workspace/LGCE_Research/LGCE_Services.txt

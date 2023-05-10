@@ -4,6 +4,8 @@ import { appendToFile, createDir, downloadFile, readFile, searchFiles, writeFile
 import { googleSearch } from './googleSearch.js';
 import { browseWebsite } from './web.js';
 import { deleteAgent, listAgents, messageAgent, startAgent } from './agents.js'
+import { wikipediaSearch } from './wikipedia.js';
+import { analyseCode, generateCode, improveCode, writeTests } from './code.js';
 
 export const commands = () => [
   command(googleSearch, {
@@ -13,6 +15,48 @@ export const commands = () => [
       query: 'query',
     },
     enabled: Config.googleApiKey !== undefined,
+  }),
+
+  command(wikipediaSearch, {
+    name: 'wikipediaSearch',
+    description: 'Wikipedia search',
+    args: {
+      query: 'query',
+    },
+  }),
+
+  command(generateCode, {
+    name: 'generateCode',
+    description: 'Typescript code generation according to a given description',
+    args: {
+      description: '<description>',
+    },
+  }),
+
+  command(improveCode, {
+    name: 'improveCode',
+    description: 'Improve given typescript code based on suggestions provided',
+    args: {
+      suggestions: '<suggestions>',
+      code: '<code>',
+    },
+  }),
+
+  command(analyseCode, {
+    name: 'analyseCode',
+    description: 'Analyse given code and suggest improvements',
+    args: {
+      code: '<code>',
+    },
+  }),
+
+  command(writeTests, {
+    name: 'writeTests',
+    description: 'Generates test cases for the given code, focusing on specific areas if given',
+    args: {
+      code: '<code>',
+      focus: '<focus>',
+    },
   }),
 
   command(createDir, {

@@ -34,7 +34,6 @@ export async function updateRunningSummary (currentMemory: Message, events: Mess
   const newEvents = [...events];
   let eventsToKeep: Message[] | string = [];
   for (const event of newEvents) {
-    console.log('event', event);
     if (event.role === 'assistant') {
       (event as any).role = 'you';
       const content = await fixAndParseJson(event.content);
@@ -65,7 +64,9 @@ ${currentMemory.content}
 
 Latest Development:
 """
-${eventsToKeep}
+${typeof eventsToKeep === 'string' ? eventsToKeep : eventsToKeep.map((event) => {
+  return ` - [${event.role}] : ${event.content}`
+}).join('\n')}
 """
 `;
   const messages: Message[] = [
@@ -74,6 +75,8 @@ ${eventsToKeep}
       content: prompt,
     }
   ];
+
+  console.log('message', messages[0]);
 
   const result = await createChatCompletion(messages, Config.fastLLMModel);
 

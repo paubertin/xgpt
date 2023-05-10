@@ -241,6 +241,18 @@ export class Logger {
 export function printAssistantThoughts (name: string, json: ResponseJSONFormat) {
   Logger.type(`${name.toUpperCase()} THOUGHTS: `, Color.yellow, json.thoughts.text);
   Logger.type('REASONING: ', Color.yellow, json.thoughts.reasoning);
+  if (json.thoughts.progress) {
+    Logger.type('PROGRESS: ', Color.yellow);
+    const lines = json.thoughts.progress.split('\n').map((l) => l.trim());
+    for (const line of lines) {
+      const i = line.indexOf('- ');
+      let l = line;
+      if (i >= 0) {
+        l = l.substring(i + 2);
+      }
+      Logger.type('- ', Color.green, l.trim());
+    }
+  }
   if (json.thoughts.plan) {
     Logger.type('PLAN: ', Color.yellow);
     const lines = json.thoughts.plan.split('\n').map((l) => l.trim());

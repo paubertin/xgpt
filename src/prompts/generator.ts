@@ -5,9 +5,9 @@ export interface ResponseJSONFormat {
   thoughts: {
     text: string;
     reasoning: string;
+    progress: string;
     plan: string;
     criticism: string;
-    speak: string;
   };
   command: {
     name: string;
@@ -18,18 +18,18 @@ export interface ResponseJSONFormat {
 export const JSON_SCHEMA = `
 {
   "command": {
-      "name": "command name",
+      "name": "next command in your plan",
       "args":{
           "arg name": "value"
       }
   },
   "thoughts":
   {
-      "text": "thought",
-      "reasoning": "reasoning",
+      "text": "What you want to say to the user",
+      "reasoning": "Why you want to say this",
+      "progress": "- A detailed bulleted list\n - of everything you have done so far",
       "plan": "- short bulleted\n- list that conveys\n- long-term plan",
-      "criticism": "constructive self-criticism",
-      "speak": "thoughts summary to say to user"
+      "criticism": "constructive self-criticism on your current action / thought"
   }
 }`;
 
